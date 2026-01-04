@@ -8,13 +8,13 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_physio_expert'
 
-# تم استخدام رابط الـ IPv4 Pooler وهو الأكثر استقراراً للربط بين Render و Supabase
-# هذا الرابط يحل مشكلة "Network is unreachable"
-DB_URL = "postgresql://postgres:Physiosupabase%402026@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+# التعديل النهائي: استخدام الرابط المباشر مع فرض وضع SSL الآمن
+# هذا يحل مشكلة "اللفة" اللانهائية عند التسجيل أو الدخول
+DB_URL = "postgresql://postgres:Physiosupabase%402026@db.xaqqxjouxfdxfafvgvoc.supabase.co:5432/postgres?sslmode=require"
 
 def get_db_connection():
-    # إضافة مهلة اتصال (timeout) لضمان عدم تعليق السيرفر
-    conn = psycopg2.connect(DB_URL, connect_timeout=10)
+    # اتصال مباشر وسريع مع مهلة زمنية قصيرة لمنع التعليق
+    conn = psycopg2.connect(DB_URL, connect_timeout=5)
     return conn
 
 # إعدادات نظام الدخول
@@ -39,7 +39,8 @@ def load_user(user_id):
         conn.close()
         if user_data:
             return User(user_data['id'], user_data['email'], user_data['created_at'])
-    except:
+    except Exception as e:
+        print(f"Error loading user: {e}")
         return None
     return None
 
@@ -59,10 +60,11 @@ def register():
             conn.commit()
             cur.close()
             conn.close()
-            flash('Account created! Please log in.', 'success')
+            flash('تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            flash('Email already exists or Database Connection Error!', 'danger')
+            print(f"Registration Error: {e}")
+            flash('خطأ: البريد الإلكتروني مسجل مسبقاً أو تعذر الاتصال بالقاعدة.', 'danger')
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -84,9 +86,10 @@ def login():
                 login_user(user_obj)
                 return redirect(url_for('home'))
             else:
-                flash('Invalid email or password', 'danger')
+                flash('البريد الإلكتروني أو كلمة المرور غير صحيحة', 'danger')
         except Exception as e:
-            flash('Could not connect to database. Please try again.', 'danger')
+            print(f"Login Error: {e}")
+            flash('حدث خطأ في الاتصال بقاعدة البيانات. حاول مرة أخرى.', 'danger')
             
     return render_template('login.html')
 
@@ -103,7 +106,6 @@ def home():
     if isinstance(reg_date, str):
         reg_date = datetime.strptime(reg_date, '%Y-%m-%d %H:%M:%S')
     
-    # إزالة التوقيت المحلي للمقارنة
     reg_date = reg_date.replace(tzinfo=None)
     days_elapsed = (datetime.now() - reg_date).days
     days_left = 30 - days_elapsed
@@ -118,14 +120,15 @@ def home():
             conn = get_db_connection()
             cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
             search_term = '%' + search_query + '%'
-            cur.execute("SELECT * FROM protocols WHERE disease_name LIKE %s OR keywords LIKE %s", 
+            cur.execute("SELECT * FROM protocols WHERE disease_name ILIKE %s OR keywords ILIKE %s", 
                         (search_term, search_term))
             data = cur.fetchone()
             cur.close()
             conn.close()
             result = data if data else "Not Found"
-        except:
-            result = "Search Error"
+        except Exception as e:
+            print(f"Search Error: {e}")
+            result = "Error"
 
     return render_template('index.html', result=result, days_left=days_left, user=current_user)
 
