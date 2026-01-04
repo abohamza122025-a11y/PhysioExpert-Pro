@@ -8,13 +8,12 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_physio_expert'
 
-# التعديل النهائي: استخدام الرابط المباشر مع فرض وضع SSL الآمن
-# هذا يحل مشكلة "اللفة" اللانهائية عند التسجيل أو الدخول
+# الرابط المباشر مع تفعيل SSL لضمان عدم حدوث تعليق أو فشل في الحفظ
 DB_URL = "postgresql://postgres:Physiosupabase%402026@db.xaqqxjouxfdxfafvgvoc.supabase.co:5432/postgres?sslmode=require"
 
 def get_db_connection():
-    # اتصال مباشر وسريع مع مهلة زمنية قصيرة لمنع التعليق
-    conn = psycopg2.connect(DB_URL, connect_timeout=5)
+    # إعداد اتصال مستقر مع مهلة زمنية
+    conn = psycopg2.connect(DB_URL, connect_timeout=10)
     return conn
 
 # إعدادات نظام الدخول
@@ -40,38 +39,55 @@ def load_user(user_id):
         if user_data:
             return User(user_data['id'], user_data['email'], user_data['created_at'])
     except Exception as e:
-        print(f"Error loading user: {e}")
+        print(f"Error in load_user: {e}")
         return None
     return None
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        if not email or not password:
+            flash('الرجاء إدخال البريد الإلكتروني وكلمة المرور', 'danger')
+            return redirect(url_for('register'))
+
         hashed_pw = generate_password_hash(password)
         created_at = datetime.now()
         
+        conn = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
+            # التأكد من أسماء الأعمدة (email, password, created_at)
             cur.execute('INSERT INTO users (email, password, created_at) VALUES (%s, %s, %s)',
                         (email, hashed_pw, created_at))
             conn.commit()
             cur.close()
             conn.close()
-            flash('تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن.', 'success')
+            
+            flash('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.', 'success')
+            # استخدام توجيه صريح لصفحة الـ login
             return redirect(url_for('login'))
+            
         except Exception as e:
-            print(f"Registration Error: {e}")
-            flash('خطأ: البريد الإلكتروني مسجل مسبقاً أو تعذر الاتصال بالقاعدة.', 'danger')
+            if conn:
+                conn.rollback()
+            print(f"Registration Detailed Error: {e}") # سيظهر السبب في Render Logs
+            flash(f'خطأ أثناء التسجيل: تأكد أن البريد الإلكتروني جديد.', 'danger')
+            return redirect(url_for('register'))
+        finally:
+            if conn:
+                conn.close()
+                
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form.get('email')
+        password = request.form.get('password')
         
         try:
             conn = get_db_connection()
@@ -86,10 +102,10 @@ def login():
                 login_user(user_obj)
                 return redirect(url_for('home'))
             else:
-                flash('البريد الإلكتروني أو كلمة المرور غير صحيحة', 'danger')
+                flash('بيانات الدخول غير صحيحة', 'danger')
         except Exception as e:
             print(f"Login Error: {e}")
-            flash('حدث خطأ في الاتصال بقاعدة البيانات. حاول مرة أخرى.', 'danger')
+            flash('حدث خطأ في الاتصال بقاعدة البيانات.', 'danger')
             
     return render_template('login.html')
 
@@ -127,8 +143,7 @@ def home():
             conn.close()
             result = data if data else "Not Found"
         except Exception as e:
-            print(f"Search Error: {e}")
-            result = "Error"
+            result = "Search Error"
 
     return render_template('index.html', result=result, days_left=days_left, user=current_user)
 
