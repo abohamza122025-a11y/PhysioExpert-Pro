@@ -8,12 +8,13 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_physio_expert'
 
-# تم تعديل الرابط لاستخدام %40 بدلاً من @ في كلمة السر لحل مشكلة الاتصال
-DB_URL = "postgresql://postgres:Physiosupabase%402026@db.xaqqxjouxfdxfafvgvoc.supabase.co:5432/postgres"
+# تم استخدام رابط الـ IPv4 Pooler وهو الأكثر استقراراً للربط بين Render و Supabase
+# هذا الرابط يحل مشكلة "Network is unreachable"
+DB_URL = "postgresql://postgres:Physiosupabase%402026@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
 
 def get_db_connection():
-    # محاولة الاتصال بقاعدة البيانات
-    conn = psycopg2.connect(DB_URL)
+    # إضافة مهلة اتصال (timeout) لضمان عدم تعليق السيرفر
+    conn = psycopg2.connect(DB_URL, connect_timeout=10)
     return conn
 
 # إعدادات نظام الدخول
@@ -50,20 +51,18 @@ def register():
         hashed_pw = generate_password_hash(password)
         created_at = datetime.now()
         
-        conn = get_db_connection()
-        cur = conn.cursor()
         try:
+            conn = get_db_connection()
+            cur = conn.cursor()
             cur.execute('INSERT INTO users (email, password, created_at) VALUES (%s, %s, %s)',
                         (email, hashed_pw, created_at))
             conn.commit()
+            cur.close()
+            conn.close()
             flash('Account created! Please log in.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            conn.rollback()
-            flash('Email already exists or Database Error!', 'danger')
-        finally:
-            cur.close()
-            conn.close()
+            flash('Email already exists or Database Connection Error!', 'danger')
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -87,7 +86,7 @@ def login():
             else:
                 flash('Invalid email or password', 'danger')
         except Exception as e:
-            flash('Database Connection Error!', 'danger')
+            flash('Could not connect to database. Please try again.', 'danger')
             
     return render_template('login.html')
 
@@ -100,16 +99,12 @@ def logout():
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # التأكد من تنسيق الوقت لحساب الفترة المتبقية
     reg_date = current_user.created_at
-    
-    # تحويل من نص إلى تاريخ إذا لزم الأمر، وإزالة المنطقة الزمنية للحساب
     if isinstance(reg_date, str):
         reg_date = datetime.strptime(reg_date, '%Y-%m-%d %H:%M:%S')
     
-    # إزالة التوقيت المحلي للمقارنة الصحيحة
+    # إزالة التوقيت المحلي للمقارنة
     reg_date = reg_date.replace(tzinfo=None)
-    
     days_elapsed = (datetime.now() - reg_date).days
     days_left = 30 - days_elapsed
     
@@ -130,7 +125,7 @@ def home():
             conn.close()
             result = data if data else "Not Found"
         except:
-            result = "Database Error"
+            result = "Search Error"
 
     return render_template('index.html', result=result, days_left=days_left, user=current_user)
 
@@ -140,5 +135,4 @@ def subscribe():
     return render_template('subscribe.html')
 
 if __name__ == '__main__':
-    # بورت 10000 هو الافتراضي لـ Render
     app.run(host='0.0.0.0', port=10000)
