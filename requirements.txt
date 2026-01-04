@@ -1,4 +1,6 @@
 flask
 flask_sqlalchemy
 flask_login
+
 gunicorn
+psycopg2-binary
