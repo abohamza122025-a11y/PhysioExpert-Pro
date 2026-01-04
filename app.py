@@ -1,6 +1,6 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash
-import psycopg2
-import psycopg2.extras
+import sqlite3
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -8,39 +8,32 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_physio_expert'
 
-# رابط الاتصال بـ Supabase (لحفظ المستخدمين فقط)
-# تم تحديثه ليناسب نظام الـ Pooler والمنفذ 6543 لضمان استقرار الخدمة
-DB_URL = "postgresql://postgres.xaqqxjouxfdxfafvgvoc:Physiosupabase%402026@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# إنشاء قاعدة بيانات محلية بسيطة (SQLite)
+DB_PATH = 'physio_expert.db'
 
-# --- قاعدة بيانات الأمراض المدمجة (إضافة بروتوكولاتك هنا) ---
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    # إنشاء جدول المستخدمين
+    cur.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )''')
+    conn.commit()
+    conn.close()
+
+# تهيئة قاعدة البيانات عند بدء التشغيل
+init_db()
+
+# --- قاعدة بيانات الأمراض المدمجة (تعدل من هنا) ---
 PROTOCOLS_DATA = [
-    {
-        "disease_name": "Disc Prolapse",
-        "keywords": "back pain, sciatica, disc, lumbar",
-        "protocol_text": "البروتوكول: الراحة في المرحلة الحادة، تمارين الاستطالة اللطيفة، وتقوية عضلات الجذع (Core exercises)."
-    },
-    {
-        "disease_name": "ACL Tear",
-        "keywords": "knee injury, ligament, surgery",
-        "protocol_text": "البروتوكول: التركيز على مدى الحركة (ROM)، تقوية عضلة الكواد (Quads)، وتمارين التوازن بعد الجراحة."
-    },
-    {
-        "disease_name": "Frozen Shoulder",
-        "keywords": "shoulder pain, stiffness, adhesive capsulitis",
-        "protocol_text": "البروتوكول: تحريك المفصل يدوياً، تمارين المدى الحركي النشط، واستخدام الكمادات الدافئة قبل التمرين."
-    }
-    # يمكنك إضافة المزيد من الأمراض بفتح قوس جديد { } ووضع بياناتها هنا
+    {"disease_name": "Disc Prolapse", "keywords": "back pain, sciatica, disc", "protocol_text": "البروتوكول: الراحة، تمارين الاستطالة، وتقوية الجذع."},
+    {"disease_name": "ACL Tear", "keywords": "knee injury, surgery", "protocol_text": "البروتوكول: مدى الحركة، تقوية الكواد، والتوازن."},
+    {"disease_name": "Frozen Shoulder", "keywords": "shoulder pain", "protocol_text": "البروتوكول: تحريك المفصل يدوياً والتمارين الحركية."}
 ]
 
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(DB_URL, connect_timeout=5)
-        return conn
-    except Exception as e:
-        print(f"Database Connection Error: {e}")
-        return None
-
-# إعدادات نظام الدخول
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -53,18 +46,13 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = get_db_connection()
-    if not conn: return None
-    try:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
-        user_data = cur.fetchone()
-        cur.close()
-        conn.close()
-        if user_data:
-            return User(user_data['id'], user_data['email'], user_data['created_at'])
-    except:
-        if conn: conn.close()
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user_data = cur.fetchone()
+    conn.close()
+    if user_data:
+        return User(user_data[0], user_data[1], user_data[3])
     return None
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -72,29 +60,19 @@ def register():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        if not email or not password:
-            flash('الرجاء إدخال البيانات كاملة', 'danger')
-            return redirect(url_for('register'))
-
         hashed_pw = generate_password_hash(password)
-        conn = get_db_connection()
-        if not conn:
-            flash('تعذر الاتصال بقاعدة البيانات حالياً، حاول مرة أخرى', 'danger')
-            return redirect(url_for('register'))
-
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         try:
+            conn = sqlite3.connect(DB_PATH)
             cur = conn.cursor()
-            cur.execute('INSERT INTO users (email, password) VALUES (%s, %s)', (email, hashed_pw))
+            cur.execute('INSERT INTO users (email, password, created_at) VALUES (?, ?, ?)', (email, hashed_pw, created_at))
             conn.commit()
-            cur.close()
             conn.close()
-            flash('تم التسجيل بنجاح! سجل دخولك الآن', 'success')
+            flash('تم التسجيل! سجل دخولك الآن', 'success')
             return redirect(url_for('login'))
-        except Exception as e:
-            if conn: conn.rollback()
-            flash('هذا البريد الإلكتروني مسجل بالفعل', 'danger')
-        finally:
-            if conn: conn.close()
+        except:
+            flash('الإيميل مسجل بالفعل', 'danger')
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -102,66 +80,43 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        conn = get_db_connection()
-        if not conn:
-            flash('خطأ في الاتصال بالسيرفر', 'danger')
-            return render_template('login.html')
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM users WHERE email = ?', (email,))
+        user_data = cur.fetchone()
+        conn.close()
         
-        try:
-            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cur.execute('SELECT * FROM users WHERE email = %s', (email,))
-            user_data = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if user_data and check_password_hash(user_data['password'], password):
-                user_obj = User(user_data['id'], user_data['email'], user_data['created_at'])
-                login_user(user_obj)
-                return redirect(url_for('home'))
-            else:
-                flash('بيانات الدخول غير صحيحة', 'danger')
-        except:
-            if conn: conn.close()
-            flash('حدث خطأ فني، حاول مجدداً', 'danger')
+        if user_data and check_password_hash(user_data[2], password):
+            user_obj = User(user_data[0], user_data[1], user_data[3])
+            login_user(user_obj)
+            return redirect(url_for('home'))
+        else:
+            flash('بيانات غير صحيحة', 'danger')
     return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # حساب أيام الاشتراك
-    reg_date = current_user.created_at
-    if isinstance(reg_date, str):
-        reg_date = datetime.strptime(reg_date.split('.')[0], '%Y-%m-%d %H:%M:%S')
-    
-    reg_date = reg_date.replace(tzinfo=None)
+    reg_date = datetime.strptime(current_user.created_at, '%Y-%m-%d %H:%M:%S')
     days_left = 30 - (datetime.now() - reg_date).days
-    
-    if days_left <= 0:
-        return redirect(url_for('subscribe'))
+    if days_left <= 0: return redirect(url_for('subscribe'))
     
     result = None
     if request.method == 'POST':
-        search_query = request.form.get('disease', '').lower()
-        # البحث يتم الآن داخل المصفوفة المدمجةPROTOCOLS_DATA
-        for protocol in PROTOCOLS_DATA:
-            if (search_query in protocol['disease_name'].lower() or 
-                search_query in protocol['keywords'].lower()):
-                result = protocol
+        query = request.form.get('disease', '').lower()
+        for p in PROTOCOLS_DATA:
+            if query in p['disease_name'].lower() or query in p['keywords'].lower():
+                result = p
                 break
-        
-        if not result:
-            result = "Not Found"
-    
+        if not result: result = "Not Found"
     return render_template('index.html', result=result, days_left=days_left, user=current_user)
 
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route('/subscribe')
-@login_required
 def subscribe():
     return render_template('subscribe.html')
 
