@@ -1,4 +1,5 @@
 import os
+from threading import Thread # (1) استيراد مكتبة الـ Threading
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -9,11 +10,10 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 
 app = Flask(__name__)
 
-# --- إعدادات الأمان والتشغيل (Configuration) ---
-# مفتاح الأمان: نجلبه من السيرفر أو نستخدم قيمة افتراضية للتجربة فقط
+# --- Configuration ---
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_physio_expert')
 
-# إعدادات قاعدة البيانات (ذكية: تختار بوستجريس في ريندر، وملف محلي في جهازك)
+# إعدادات قاعدة البيانات
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -21,15 +21,21 @@ if db_url and db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# إعدادات البريد الإلكتروني (Gmail)
+# (2) حل مشكلة انقطاع الاتصال (EOF detected)
+# هذا الكود يجعل SQLAlchemy يفحص الاتصال قبل استخدامه
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+
+# إعدادات البريد الإلكتروني
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') # إيميلك
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') # باسوورد التطبيقات
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', 'email_confirm_salt')
 
-# تهيئة المكتبات
 db = SQLAlchemy(app)
 mail = Mail(app)
 login_manager = LoginManager()
@@ -37,13 +43,13 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 s = URLSafeTimedSerializer(app.secret_key)
 
-# --- جداول قاعدة البيانات (Database Models) ---
+# --- Database Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_confirmed = db.Column(db.Boolean, default=False) # هل الإيميل مفعل؟
+    is_confirmed = db.Column(db.Boolean, default=False)
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -55,25 +61,28 @@ class Protocol(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- دوال المساعدة ---
+# --- (3) دالة إرسال الإيميل في الخلفية ---
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f"Error sending email: {e}")
+
 def send_confirmation_email(user_email):
     token = s.dumps(user_email, salt=app.config['SECURITY_PASSWORD_SALT'])
     link = url_for('confirm_email', token=token, _external=True)
     msg = Message('تفعيل حساب Physio Expert', sender=app.config['MAIL_USERNAME'], recipients=[user_email])
     msg.body = f'أهلاً بك! لتفعيل حسابك يرجى الضغط على الرابط التالي: {link}'
-    try:
-        mail.send(msg)
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        # يمكن تسجيل الخطأ هنا ولكن لا نوقف التطبيق
+    
+    # تشغيل الإرسال في Thread منفصل عشان الموقع ميعلقش
+    Thread(target=send_async_email, args=(app, msg)).start()
 
-# --- المسارات (Routes) ---
+# --- Routes ---
 
 @app.route('/')
 @login_required
 def home():
-    # حساب الأيام المتبقية
-    # ملاحظة: created_at أصبح كائن وقت وليس نصاً، مما يسهل الحساب
     days_elapsed = (datetime.utcnow() - current_user.created_at).days
     days_left = 30 - days_elapsed
     
@@ -81,11 +90,6 @@ def home():
         return redirect(url_for('subscribe'))
     
     result = None
-    if request.method == 'POST': # إذا كان هناك بحث (أو يمكن فصل البحث في مسار آخر)
-        # هذا الجزء يعتمد على طريقة تصميمك للبحث في الـ HTML
-        pass 
-
-    # منطق البحث البسيط (GET param or POST)
     search_query = request.args.get('disease') or request.form.get('disease')
     if search_query:
         search_term = f"%{search_query}%"
@@ -106,7 +110,6 @@ def register():
         email = request.form['email']
         password = request.form['password']
         
-        # التأكد هل المستخدم موجود مسبقاً
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
             flash('هذا البريد الإلكتروني مسجل بالفعل!', 'danger')
@@ -118,11 +121,12 @@ def register():
         try:
             db.session.add(new_user)
             db.session.commit()
-            # إرسال إيميل التفعيل
             send_confirmation_email(email)
             flash('تم إنشاء الحساب بنجاح! تم إرسال رابط التفعيل إلى بريدك الإلكتروني.', 'success')
             return redirect(url_for('login'))
-        except:
+        except Exception as e:
+            db.session.rollback() # تراجع عن الحفظ لو حصل خطأ
+            print(f"Error: {e}")
             flash('حدث خطأ أثناء التسجيل، حاول مرة أخرى.', 'danger')
             
     return render_template('register.html')
@@ -156,7 +160,7 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        remember = True if request.form.get('remember') else False # زر "تذكرني"
+        remember = True if request.form.get('remember') else False
         
         user = User.query.filter_by(email=email).first()
         
@@ -184,7 +188,6 @@ def logout():
 def subscribe():
     return render_template('subscribe.html')
 
-# إنشاء قاعدة البيانات عند التشغيل (مهم جداً)
 with app.app_context():
     db.create_all()
 
