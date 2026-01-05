@@ -41,7 +41,6 @@ class Protocol(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# حماية الأدمن
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -60,31 +59,43 @@ def home():
     search_query = request.args.get('disease') or request.form.get('disease')
     if search_query:
         search_term = f"%{search_query}%"
-        result = Protocol.query.filter(
-            (Protocol.disease_name.ilike(search_term)) | 
-            (Protocol.keywords.ilike(search_term))
-        ).first()
+        result = Protocol.query.filter((Protocol.disease_name.ilike(search_term)) | (Protocol.keywords.ilike(search_term))).first()
     return render_template('index.html', result=result, user=current_user)
 
 @app.route('/import-data')
+@login_required
 def import_data():
-    data = [
-        {"n": "Knee Osteoarthritis - خشونة الركبة", "k": "knee, oa, خشونة, الركبة", "t": "NMES: 50Hz. Strengthening Quads. Exercises: Quad Sets, SLR, Mini Squats."},
-        {"n": "Lumbar Disc - الديسك", "k": "back, disc, ديسك, ظهر", "t": "IFC Carrier: 4000Hz. Exercises: McKenzie Extension, Core Stability."},
-        {"n": "Adhesive Capsulitis - الكتف المتجمد", "k": "shoulder, stiffness, الكتف, المتجمد", "t": "TENS: 100Hz. Exercises: Wall Climb, Wand Exercises."},
-        {"n": "Ankle Sprain - التواء الكاحل", "k": "ankle, sprain, التواء, الكاحل", "t": "HVPC: 120Hz for edema. Exercises: RICE, Balance training."},
-        {"n": "ACL Rehab - الرباط الصليبي", "k": "acl, knee, الرباط, الصليبي", "t": "Russian Current: 2500Hz. Restore quad strength."},
-        {"n": "Bell's Palsy - شلل الوجه", "k": "face, bell, شلل, الوجه", "t": "EMS for facial muscles. Exercises: Mime Therapy."},
-        {"n": "Stroke Rehab - الجلطة الدماغية", "k": "stroke, paralysis, الجلطة", "t": "FES for Foot Drop. Neuroplasticity focus."},
-        {"n": "Tennis Elbow - التهاب الكوع", "k": "elbow, tennis, التهاب, الكوع", "t": "TENS 100Hz. Pulsed US. Eccentric exercises."}
+    full_data = [
+        {"n": "Rotator Cuff Repair (Post-Op)", "k": "shoulder, cuff, قطع وتر الكتف", "t": "TENS: 100Hz. Phase 1: PROM only. Phase 2: AAROM. Phase 3: Strengthening."},
+        {"n": "Total Hip Arthroplasty (Post-Op THA)", "k": "hip, tha, surgery, مفصل الفخذ", "t": "TENS for pain. Exercises: Ankle Pumps, Glute Squeeze, Heel Slides. Avoid crossing midline."},
+        {"n": "Total Knee Arthroplasty (Post-Op TKA)", "k": "knee, tka, surgery, مفصل الركبة", "t": "NMES for Quads: 50Hz. Phase 1: Ankle pumps, Quad sets, Heel slides."},
+        {"n": "Knee Osteoarthritis", "k": "knee pain, oa, stiffness, خشونة الركبة", "t": "NMES: 50Hz. Strengthening Quads. Exercises: Quad Sets, SLR, Mini Squats."},
+        {"n": "Lumbar Disc Herniation (Sciatica)", "k": "back, sciatica, disc, ديسك, عرق النسا", "t": "IFC Carrier: 4000Hz. Paravertebral electrodes. Exercises: McKenzie Extension, Core Stability."},
+        {"n": "Adhesive Capsulitis (Frozen Shoulder)", "k": "stiffness, shoulder, الكتف المتجمد", "t": "TENS: 100-150 Hz. US 1 MHz. Exercises: Wall Climb, Wand Exercises, Pendulums."},
+        {"n": "Lateral Ankle Sprain", "k": "ankle, sprain, swelling, التواء الكاحل", "t": "HVPC/IFC: 120 Hz. Negative polarity for edema. Exercises: RICE, Balance."},
+        {"n": "Meniscus Tear", "k": "knee locking, clicking, cartilage, غضروف الركبة", "t": "NMES for Quad strength. TENS for joint line pain. Exercises: Bike, Balance Training."},
+        {"n": "ACL Reconstruction Rehab", "k": "acl, knee ligament, surgery, الرباط الصليبي", "t": "NMES (Russian Current) 2500Hz. Restore quad strength. Month 3: Running drills."},
+        {"n": "Hamstring Muscle Strain", "k": "pulled muscle, thigh, مزق العضلة الخلفية", "t": "IFC for pain. US Pulsed 20%. Phase 2: Eccentric loading (Nordic Hamstring Curl)."},
+        {"n": "Mechanical Neck Pain", "k": "neck, cervical, stiffness, شد عضلات الرقبة", "t": "TENS (Burst Mode) 2-4 Hz. Exercises: Chin Tucks, Trapezius Stretch."},
+        {"n": "Diabetic Peripheral Neuropathy", "k": "diabetes, numbness, pain, التهاب الأعصاب", "t": "TENS 80-100Hz. Exercises: Balance Training, Gait Training, Foot Care."},
+        {"n": "Bell's Palsy (Facial Palsy)", "k": "face, palsy, bell, شلل الوجه", "t": "EMS for facial muscles. Maintain muscle bulk. Exercises: Mime Therapy, Kabat Rehab."},
+        {"n": "Stroke Rehabilitation (Hemiplegia)", "k": "cva, stroke, paralysis, الجلطة الدماغية", "t": "FES for Foot Drop. Neuroplasticity and functional motor re-learning."},
+        {"n": "Lateral Epicondylitis (Tennis Elbow)", "k": "elbow, tennis elbow, التهاب الكوع", "t": "TENS 100 Hz. Pulsed US 3 MHz. Exercises: Eccentric Wrist Extension."},
+        {"n": "Parkinson's Disease", "k": "tremor, balance, pd, الشلل الرعاش", "t": "Auditory/Visual Cueing. Exercises: LSVT BIG, Balance & Fall Prevention."},
+        {"n": "Stress Urinary Incontinence", "k": "leakage, pelvic floor, سلس البول", "t": "Vaginal/Anal Electrical Stimulation 50Hz. Exercises: Kegel Exercises."},
+        {"n": "Labor Pain Management", "k": "birth, delivery, pain, الولادة", "t": "Obstetric TENS: 100Hz. Paravertebral: T10-L1 and S2-S4."},
+        {"n": "Diastasis Recti (Post-Partum)", "k": "pregnancy, tummy, انفصال العضلات", "t": "NMES for Rectus Abdominis. Exercises: Core brace, Heel Slides."},
+        {"n": "Lymphedema Management", "k": "swelling, lymph, التورم الليمفاوي", "t": "Complex Decongestive Therapy (CDT). Manual Lymph Drainage. Bandaging."},
+        {"n": "ESRD & Hemodialysis Rehab", "k": "kidney, dialysis, الغسيل الكلوي", "t": "NMES (Intradialytic) for Quads. Exercises: Intradialytic Cycling."},
+        {"n": "Cardiac Rehab (CABG)", "k": "heart surgery, bypass, قلب مفتوح", "t": "TENS (Sternal Pain). Phase 1: Breathing exercises. Walking program."}
     ]
     try:
         db.create_all()
         Protocol.query.delete()
-        for i in data:
-            db.session.add(Protocol(disease_name=i['n'], keywords=i['k'], protocol_text=i['t']))
+        for item in full_data:
+            db.session.add(Protocol(disease_name=item['n'], keywords=item['k'], protocol_text=item['t']))
         db.session.commit()
-        return "✅ Done! Data Imported."
+        return f"<h1>✅ تم استعادة {len(full_data)} بروتوكول بنجاح!</h1>"
     except Exception as e: return str(e)
 
 @app.route('/admin')
@@ -101,6 +112,27 @@ def add_protocol():
         db.session.add(p); db.session.commit()
         return redirect(url_for('admin_dashboard'))
     return render_template('add_protocol.html')
+
+@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_protocol(id):
+    protocol = Protocol.query.get_or_404(id)
+    if request.method == 'POST':
+        protocol.disease_name = request.form['disease_name']
+        protocol.keywords = request.form['keywords']
+        protocol.protocol_text = request.form['protocol_text']
+        protocol.electrode_image_url = request.form['image_url']
+        db.session.commit()
+        return redirect(url_for('admin_dashboard'))
+    return render_template('edit_protocol.html', protocol=protocol)
+
+@app.route('/admin/delete/<int:id>')
+@admin_required
+def delete_protocol(id):
+    protocol = Protocol.query.get_or_404(id)
+    db.session.delete(protocol)
+    db.session.commit()
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/make-me-admin')
 @login_required
