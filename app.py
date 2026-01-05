@@ -191,9 +191,9 @@ def logout():
 
 @app.route('/subscribe')
 def subscribe(): return render_template('subscribe.html')
-
 with app.app_context():
-    db.create_all()
-
+    db.drop_all()    # مسح القديم (التنظيف)
+    db.create_all()  # بناء الجديد (بالتعديلات)
 if __name__ == '__main__':
     app.run(debug=True)
+
