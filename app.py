@@ -1,5 +1,5 @@
 import os
-from threading import Thread # (1) استيراد مكتبة الـ Threading
+from threading import Thread
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -10,32 +10,37 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 
 app = Flask(__name__)
 
-# --- Configuration ---
+# --- 1. Configuration (إعدادات النظام الأساسية) ---
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_physio_expert')
 
-# إعدادات قاعدة البيانات
+# --- 2. Database Configuration (إعدادات قاعدة البيانات الاحترافية) ---
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
+# تصحيح رابط قاعدة البيانات ليتوافق مع مكتبات Render الحديثة
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# (2) حل مشكلة انقطاع الاتصال (EOF detected)
-# هذا الكود يجعل SQLAlchemy يفحص الاتصال قبل استخدامه
+# منع انقطاع الاتصال بالقاعدة (Keep-Alive Ping)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
     "pool_recycle": 300,
 }
 
-# إعدادات البريد الإلكتروني
-app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+# --- 3. Email Configuration (إعدادات البريد الصارمة) ---
+# استخدام النطاق الرسمي لضمان الوصول عبر الشبكة
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False  # يجب أن يكون False عند استخدام TLS لمنع التضارب
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+# تحديد المرسل الافتراضي ضروري جداً لمنع رفض الاتصال من جوجل
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', 'email_confirm_salt')
 
+# تهيئة الإضافات
 db = SQLAlchemy(app)
 mail = Mail(app)
 login_manager = LoginManager()
@@ -43,7 +48,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 s = URLSafeTimedSerializer(app.secret_key)
 
-# --- Database Models ---
+# --- 4. Database Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -61,35 +66,45 @@ class Protocol(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- (3) دالة إرسال الإيميل في الخلفية ---
+# --- 5. Asynchronous Email Handling (الإرسال في الخلفية) ---
 def send_async_email(app, msg):
+    # إنشاء سياق التطبيق داخل الخيط الجديد لضمان عمل Flask-Mail
     with app.app_context():
         try:
             mail.send(msg)
+            print(f"Email sent successfully to {msg.recipients}")
         except Exception as e:
-            print(f"Error sending email: {e}")
+            # طباعة الخطأ في السيرفر فقط دون التأثير على المستخدم
+            print(f"Failed to send email: {e}")
 
 def send_confirmation_email(user_email):
     token = s.dumps(user_email, salt=app.config['SECURITY_PASSWORD_SALT'])
     link = url_for('confirm_email', token=token, _external=True)
-    msg = Message('تفعيل حساب Physio Expert', sender=app.config['MAIL_USERNAME'], recipients=[user_email])
-    msg.body = f'أهلاً بك! لتفعيل حسابك يرجى الضغط على الرابط التالي: {link}'
     
-    # تشغيل الإرسال في Thread منفصل عشان الموقع ميعلقش
+    msg = Message(
+        subject='تفعيل حساب Physio Expert',
+        recipients=[user_email],
+        body=f'أهلاً بك! لتفعيل حسابك يرجى الضغط على الرابط التالي: {link}'
+    )
+    
+    # تشغيل الإرسال في Thread منفصل
     Thread(target=send_async_email, args=(app, msg)).start()
 
-# --- Routes ---
+# --- 6. Routes ---
 
-# مسار خاص لفحص مشاكل الإيميل (اختياري)
+# مسار التشخيص (Test Route) - للتأكد من الاتصال
 @app.route('/debug-email')
 def debug_email():
     try:
-        msg = Message('Test Email', sender=app.config['MAIL_USERNAME'], recipients=[app.config['MAIL_USERNAME']])
-        msg.body = 'This is a test email to check configuration.'
+        msg = Message(
+            subject='Debug Email',
+            recipients=[app.config['MAIL_USERNAME']],
+            body='This is a test email from Physio Expert server.'
+        )
         mail.send(msg)
-        return "تم إرسال الإيميل بنجاح! المشكلة كانت مؤقتة."
+        return "<h1>Success!</h1><p>Email sent successfully via smtp.gmail.com.</p>"
     except Exception as e:
-        return f"<h1>خطأ في الإرسال:</h1><p>{str(e)}</p>"
+        return f"<h1>Connection Failed</h1><p>Error details: {str(e)}</p>"
 
 @app.route('/')
 @login_required
@@ -132,12 +147,13 @@ def register():
         try:
             db.session.add(new_user)
             db.session.commit()
+            # إرسال الإيميل (لن يوقف الموقع حتى لو فشل)
             send_confirmation_email(email)
             flash('تم إنشاء الحساب بنجاح! تم إرسال رابط التفعيل إلى بريدك الإلكتروني.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            db.session.rollback() # تراجع عن الحفظ لو حصل خطأ
-            print(f"Error: {e}")
+            db.session.rollback()
+            print(f"Database Error: {e}")
             flash('حدث خطأ أثناء التسجيل، حاول مرة أخرى.', 'danger')
             
     return render_template('register.html')
