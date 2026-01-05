@@ -10,37 +10,32 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 
 app = Flask(__name__)
 
-# --- 1. Configuration (إعدادات النظام الأساسية) ---
+# --- 1. Configuration ---
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_physio_expert')
 
-# --- 2. Database Configuration (إعدادات قاعدة البيانات) ---
+# --- 2. Database Configuration ---
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
-# تصحيح رابط قاعدة البيانات ليتوافق مع Render (Postgres)
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# منع انقطاع الاتصال بالقاعدة (Keep-Alive Ping)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
     "pool_recycle": 300,
 }
 
-# --- 3. Email Configuration (الإعدادات المعدلة - SSL 465) ---
-# تم التعديل هنا لحل مشكلة Timeout نهائياً
+# --- 3. Email Configuration (SSL Port 465) ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 465          # المنفذ الآمن المباشر (SSL)
-app.config['MAIL_USE_TLS'] = False     # إيقاف TLS القديم لمنع التعليق
-app.config['MAIL_USE_SSL'] = True      # تفعيل SSL الإجباري
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-# تحديد المرسل الافتراضي ضروري جداً
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 app.config['SECURITY_PASSWORD_SALT'] = os.environ.get('SECURITY_PASSWORD_SALT', 'email_confirm_salt')
 
-# تهيئة الإضافات
+# Extensions
 db = SQLAlchemy(app)
 mail = Mail(app)
 login_manager = LoginManager()
@@ -48,7 +43,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 s = URLSafeTimedSerializer(app.secret_key)
 
-# --- 4. Database Models ---
+# --- 4. Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -66,51 +61,48 @@ class Protocol(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- 5. Asynchronous Email Handling (إرسال في الخلفية) ---
+# --- 5. Async Email Helper ---
 def send_async_email(app, msg):
-    # استخدام with app.app_context() ضروري داخل الـ Thread
     with app.app_context():
         try:
             mail.send(msg)
-            print(f"Email sent successfully via SSL to {msg.recipients}")
+            print(f"✅ Email sent successfully to {msg.recipients}")
         except Exception as e:
-            print(f"Failed to send email: {e}")
+            print(f"❌ Failed to send email: {e}")
 
 def send_confirmation_email(user_email):
     token = s.dumps(user_email, salt=app.config['SECURITY_PASSWORD_SALT'])
     link = url_for('confirm_email', token=token, _external=True)
-    
     msg = Message(
         subject='تفعيل حساب Physio Expert',
         recipients=[user_email],
         body=f'أهلاً بك! لتفعيل حسابك يرجى الضغط على الرابط التالي: {link}'
     )
-    
-    # تشغيل الإرسال في Thread منفصل لعدم تعطيل المستخدم
+    # تشغيل في الخلفية لمنع توقف الموقع
     Thread(target=send_async_email, args=(app, msg)).start()
 
 # --- 6. Routes ---
 
-# مسار التشخيص (Test Route)
 @app.route('/debug-email')
 def debug_email():
+    # تم التعديل ليعمل في الخلفية ويمنع Timeout Error
     try:
         msg = Message(
-            subject='Debug Email (SSL Test)',
+            subject='Debug Email (Render SSL)',
             recipients=[app.config['MAIL_USERNAME']],
-            body='This is a test email sent via Port 465 (SSL).'
+            body='This is a test email sent via Port 465 (SSL) using Background Thread.'
         )
-        mail.send(msg)
-        return "<h1>Success!</h1><p>Email sent successfully via SSL (Port 465).</p>"
+        # نستخدم Thread هنا أيضاً
+        Thread(target=send_async_email, args=(app, msg)).start()
+        return "<h1>Request Sent!</h1><p>Email is being sent in the background. Check your Inbox (and Spam) in a few seconds.</p>"
     except Exception as e:
-        return f"<h1>Failed:</h1><p>{str(e)}</p>"
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
 
 @app.route('/')
 @login_required
 def home():
     days_elapsed = (datetime.utcnow() - current_user.created_at).days
     days_left = 30 - days_elapsed
-    
     if days_left <= 0:
         return redirect(url_for('subscribe'))
     
@@ -123,38 +115,31 @@ def home():
             (Protocol.keywords.ilike(search_term))
         ).first()
         result = protocol if protocol else "Not Found"
-
     return render_template('index.html', result=result, days_left=days_left, user=current_user)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
-
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        
-        user_exists = User.query.filter_by(email=email).first()
-        if user_exists:
+        if User.query.filter_by(email=email).first():
             flash('هذا البريد الإلكتروني مسجل بالفعل!', 'danger')
             return redirect(url_for('register'))
         
         hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
         new_user = User(email=email, password=hashed_pw)
-        
         try:
             db.session.add(new_user)
             db.session.commit()
-            # إرسال الإيميل (لن يوقف الموقع حتى لو فشل)
             send_confirmation_email(email)
-            flash('تم إنشاء الحساب بنجاح! تم إرسال رابط التفعيل إلى بريدك الإلكتروني.', 'success')
+            flash('تم إنشاء الحساب! جاري إرسال رابط التفعيل...', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
-            print(f"Database Error: {e}")
-            flash('حدث خطأ أثناء التسجيل، حاول مرة أخرى.', 'danger')
-            
+            print(f"DB Error: {e}")
+            flash('حدث خطأ أثناء التسجيل.', 'danger')
     return render_template('register.html')
 
 @app.route('/confirm/<token>')
@@ -162,45 +147,36 @@ def confirm_email(token):
     try:
         email = s.loads(token, salt=app.config['SECURITY_PASSWORD_SALT'], max_age=3600)
     except SignatureExpired:
-        flash('رابط التفعيل منتهي الصلاحية.', 'danger')
+        flash('رابط التفعيل منتهي.', 'danger')
         return redirect(url_for('login'))
     except Exception:
-        flash('رابط التفعيل غير صحيح.', 'danger')
+        flash('الرابط غير صالح.', 'danger')
         return redirect(url_for('login'))
     
     user = User.query.filter_by(email=email).first_or_404()
-    if user.is_confirmed:
-        flash('الحساب مفعل بالفعل. قم بتسجيل الدخول.', 'success')
-    else:
+    if not user.is_confirmed:
         user.is_confirmed = True
         db.session.commit()
-        flash('تم تفعيل حسابك بنجاح!', 'success')
-        
+        flash('تم تفعيل الحساب بنجاح!', 'success')
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
-        
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
         remember = True if request.form.get('remember') else False
-        
         user = User.query.filter_by(email=email).first()
-        
         if not user or not check_password_hash(user.password, password):
-            flash('تأكد من البريد الإلكتروني وكلمة المرور.', 'danger')
+            flash('بيانات الدخول غير صحيحة.', 'danger')
             return redirect(url_for('login'))
-        
         if not user.is_confirmed:
-            flash('يرجى تفعيل حسابك أولاً من خلال الرابط المرسل لبريدك.', 'warning')
+            flash('يجب تفعيل الحساب من الإيميل أولاً.', 'warning')
             return redirect(url_for('login'))
-            
         login_user(user, remember=remember)
         return redirect(url_for('home'))
-        
     return render_template('login.html')
 
 @app.route('/logout')
