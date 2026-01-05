@@ -2,3 +2,6 @@ flask
 flask-login
 werkzeug
 gunicorn
+flask-sqlalchemy
+flask-mail
+psycopg2-binary
