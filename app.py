@@ -80,6 +80,17 @@ def send_confirmation_email(user_email):
 
 # --- Routes ---
 
+# مسار خاص لفحص مشاكل الإيميل (اختياري)
+@app.route('/debug-email')
+def debug_email():
+    try:
+        msg = Message('Test Email', sender=app.config['MAIL_USERNAME'], recipients=[app.config['MAIL_USERNAME']])
+        msg.body = 'This is a test email to check configuration.'
+        mail.send(msg)
+        return "تم إرسال الإيميل بنجاح! المشكلة كانت مؤقتة."
+    except Exception as e:
+        return f"<h1>خطأ في الإرسال:</h1><p>{str(e)}</p>"
+
 @app.route('/')
 @login_required
 def home():
