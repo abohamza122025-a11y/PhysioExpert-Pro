@@ -58,10 +58,11 @@ def admin_required(f):
 
 # --- 4. Routes ---
 
-@app.route('/')
+# [تعديل هام] السماح بـ POST و GET لحل مشكلة البحث
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # التحقق من الاشتراك (الكود السابق)
+    # التحقق من الاشتراك
     now = datetime.utcnow()
     days_elapsed = (now - current_user.created_at).days
     is_trial = days_elapsed < 30
@@ -74,7 +75,9 @@ def home():
     
     # البحث
     result = None
-    search_query = request.args.get('disease')
+    # [تعديل هام] استقبال البيانات سواء كانت GET أو POST
+    search_query = request.args.get('disease') or request.form.get('disease')
+    
     if search_query:
         search_term = f"%{search_query}%"
         # البحث في الاسم أو الكلمات المفتاحية
@@ -191,9 +194,11 @@ def logout():
 
 @app.route('/subscribe')
 def subscribe(): return render_template('subscribe.html')
+
 with app.app_context():
-    db.drop_all()    # مسح القديم (التنظيف)
-    db.create_all()  # بناء الجديد (بالتعديلات)
+    # [تعديل هام] تم إيقاف المسح التلقائي للحفاظ على البيانات
+    # db.drop_all()  <-- تم تعطيل هذا السطر
+    db.create_all()
+
 if __name__ == '__main__':
     app.run(debug=True)
-
