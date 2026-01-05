@@ -1,55 +1,113 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8"><title>Physio Expert Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physio Expert Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-custom { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.3s; }
+        .card-custom:hover { transform: translateY(-5px); }
+        .icon-box { width: 45px; height: 45px; background: #e7f1ff; color: #0d6efd; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .trial-badge { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px 20px; border-radius: 30px; display: inline-block; font-weight: 600; }
+    </style>
 </head>
 <body class="bg-light text-end">
+
 <div class="container py-4">
-    <div class="alert alert-info text-center shadow-sm">
-        You are in <strong>Free Trial</strong>. Remaining: <strong>{{ days_left }} days</strong>. 
-        Subscription: <strong>100 EGP / month</strong>.
+    <div class="text-center mb-5">
+        <div class="trial-badge shadow-sm">
+            <i class="fas fa-clock me-2"></i>
+            You are in <strong>Free Trial</strong>. Remaining: <strong>{{ days_left }} days</strong>. 
+            <span class="mx-2">|</span>
+            Subscription: <strong>100 EGP / month</strong>
+        </div>
     </div>
 
-    <div class="text-center my-5">
-        <h1 class="text-primary fw-bold">Physio Expert Pro 🩺</h1>
-        <form method="POST" class="input-group mb-3 mx-auto" style="max-width: 600px;">
-            <input type="text" name="disease" class="form-control shadow-none" placeholder="ابحث عن حالة..." required>
-            <button type="submit" class="btn btn-primary px-4">بحث</button>
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-primary mb-3">Physio Expert Pro 🩺</h1>
+        <form method="POST" class="input-group mb-3 mx-auto shadow-sm" style="max-width: 650px; border-radius: 10px; overflow: hidden;">
+            <input type="text" name="disease" class="form-control form-control-lg border-0" placeholder="ابحث عن اسم الحالة أو المرض (مثلاً: الركبة، ديسك)..." required>
+            <button type="submit" class="btn btn-primary px-4 fw-bold">بحث الآن</button>
         </form>
     </div>
 
     {% if result %}
+    <div class="text-center mb-4 pt-3">
+        <h2 class="fw-bold text-dark mb-2">{{ result.disease_name }}</h2>
+        <p class="text-muted fst-italic lead">{{ result.description }}</p>
+    </div>
+
     <div class="row g-4 text-start">
-        <div class="col-12 text-center mb-2">
-            <h2 class="text-primary fw-bold">{{ result.disease_name }}</h2>
-            <p class="text-muted fst-italic">{{ result.description }}</p>
-        </div>
         <div class="col-md-6">
-            <div class="card border-0 shadow-sm p-4 h-100">
-                <h5 class="fw-bold"><i class="fas fa-bolt text-primary me-2"></i> Electrical Stimulation</h5>
-                <hr><h6 class="text-primary fw-bold">{{ result.estim_type }}</h6>
-                <p class="small"><strong>Parameters:</strong><br>{{ result.estim_params }}</p>
-                <p class="small text-muted"><strong>Role:</strong> {{ result.estim_role }}</p>
+            <div class="card card-custom h-100 p-4 border-top border-primary border-5">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-box me-3"><i class="fas fa-bolt"></i></div>
+                    <h5 class="mb-0 fw-bold">Electrical Stimulation</h5>
+                </div>
+                <h6 class="text-primary fw-bold mb-3">{{ result.estim_type }}</h6>
+                <div class="mb-2">
+                    <span class="badge bg-light text-dark mb-1">Parameters:</span>
+                    <p class="small">{{ result.estim_params }}</p>
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark mb-1">Clinical Role:</span>
+                    <p class="small text-muted mb-0">{{ result.estim_role }}</p>
+                </div>
             </div>
         </div>
+
         <div class="col-md-6">
-            <div class="card border-0 shadow-sm p-4 h-100 border-end border-success border-5">
-                <h5 class="fw-bold"><i class="fas fa-wave-square text-success me-2"></i> Therapeutic Ultrasound</h5>
-                <hr><h6 class="text-success fw-bold">{{ result.us_type }}</h6>
-                <p class="small"><strong>Parameters:</strong><br>{{ result.us_params }}</p>
-                <p class="small text-muted"><strong>Role:</strong> {{ result.us_role }}</p>
+            <div class="card card-custom h-100 p-4 border-top border-success border-5">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-box me-3 text-success" style="background: #e8f5e9;"><i class="fas fa-wave-square"></i></div>
+                    <h5 class="mb-0 fw-bold text-dark">Therapeutic Ultrasound</h5>
+                </div>
+                <h6 class="text-success fw-bold mb-3">{{ result.us_type }}</h6>
+                <div class="mb-2">
+                    <span class="badge bg-light text-dark mb-1">Parameters:</span>
+                    <p class="small">{{ result.us_params }}</p>
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark mb-1">Clinical Role:</span>
+                    <p class="small text-muted mb-0">{{ result.us_role }}</p>
+                </div>
             </div>
         </div>
+
         <div class="col-12">
-            <div class="card border-0 shadow-sm p-4 border-start border-warning border-5">
-                <h5 class="fw-bold"><i class="fas fa-running text-warning me-2"></i> Therapeutic Exercises & Dosage</h5>
-                <hr><p style="white-space: pre-line;" class="lead">{{ result.exercises_list }}</p>
+            <div class="card card-custom p-4 border-start border-warning border-5 shadow-sm">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-box me-3 text-warning" style="background: #fff3e0;"><i class="fas fa-running"></i></div>
+                    <h5 class="mb-0 fw-bold text-dark">Therapeutic Exercises & Dosage</h5>
+                </div>
+                <hr>
+                <p style="white-space: pre-line;" class="lead fs-6">{{ result.exercises_list }}</p>
             </div>
         </div>
+
+        {% if result.electrode_image %}
+        <div class="col-12 text-center">
+            <div class="card card-custom p-4 bg-white shadow-sm border-0">
+                <h5 class="fw-bold mb-4 text-dark"><i class="fas fa-image text-muted me-2"></i> Electrode Placement Diagram</h5>
+                <img src="{{ url_for('static', filename=result.electrode_image) }}" 
+                     class="img-fluid rounded shadow-sm border" 
+                     alt="Placement Map"
+                     style="max-height: 450px; width: auto; object-fit: contain;">
+                <p class="text-muted mt-2 small">Refer to clinical guidelines for exact anatomical placement.</p>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
+
+    <footer class="mt-5 text-center text-muted py-3">
+        <small>&copy; 2026 Physio Expert Pro - All Rights Reserved</small>
+    </footer>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
