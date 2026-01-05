@@ -6,32 +6,24 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light text-end">
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 text-center">
-            <h1 class="mb-4">Physio Expert Pro 🩺</h1>
-            <form method="POST" class="input-group mb-5 shadow-sm">
-                <input type="text" name="disease" class="form-control form-control-lg" placeholder="ابحث عن مرض أو حالة..." required>
-                <button type="submit" class="btn btn-primary px-4">بحث</button>
-            </form>
-
-            {% if result %}
-            <div class="card shadow border-0">
-                <div class="card-header bg-primary text-white py-3">
-                    <h2 class="h4 mb-0">{{ result.disease_name }}</h2>
-                </div>
-                <div class="card-body">
-                    <h5 class="text-muted mb-3">بروتوكول العلاج:</h5>
-                    <p class="lead" style="white-space: pre-wrap;">{{ result.protocol_text }}</p>
-                    {% if result.electrode_image_url %}
-                    <hr>
-                    <img src="{{ result.electrode_image_url }}" class="img-fluid rounded border" style="max-height: 400px;">
-                    {% endif %}
-                </div>
-            </div>
+<div class="container py-5 text-center">
+    <h1 class="mb-4">Physio Expert Pro 🩺</h1>
+    <form method="POST" class="input-group mb-5 mx-auto" style="max-width: 600px;">
+        <input type="text" name="disease" class="form-control" placeholder="ابحث عن مرض أو حالة..." required>
+        <button type="submit" class="btn btn-primary">بحث</button>
+    </form>
+    {% if result %}
+    <div class="card shadow text-end mx-auto" style="max-width: 700px;">
+        <div class="card-header bg-primary text-white"><h2>{{ result.disease_name }}</h2></div>
+        <div class="card-body">
+            <h5>البروتوكول:</h5>
+            <p style="white-space: pre-wrap;">{{ result.protocol_text }}</p>
+            {% if result.electrode_image_url %}
+            <hr><img src="{{ result.electrode_image_url }}" class="img-fluid rounded">
             {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
 </body>
 </html>
