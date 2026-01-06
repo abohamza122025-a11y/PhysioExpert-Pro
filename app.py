@@ -3,14 +3,14 @@ from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text # <--- تم إضافة هذا الاستيراد للتعامل مع قاعدة البيانات مباشرة
+from sqlalchemy import text # <--- ضروري للتعامل مع التعديلات
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_2026')
 
-# إعداد قاعدة البيانات
+# إعداد قاعدة البيانات - لا تقلق لن يتم مسح البيانات القديمة
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -26,9 +26,9 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # مهم لحساب الـ 30 يوم
     is_admin = db.Column(db.Boolean, default=False)
-    subscription_end = db.Column(db.DateTime, nullable=True) # هذا هو العمود الجديد المسبب للمشكلة
+    subscription_end = db.Column(db.DateTime, nullable=True)
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -42,7 +42,7 @@ class Protocol(db.Model):
     us_params = db.Column(db.Text)
     us_role = db.Column(db.Text)
     exercises_list = db.Column(db.Text)
-    electrode_image = db.Column(db.String(500))
+    electrode_image = db.Column(db.String(500)) # اسم الملف في مجلد static
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
@@ -62,11 +62,11 @@ def admin_required(f):
 @login_required
 def home():
     now = datetime.utcnow()
-    # حساب الأيام المتبقية
+    # حساب الأيام المتبقية من الـ 30 يوم
     delta = now - current_user.created_at
     days_left = 30 - delta.days
     
-    # التحقق من الصلاحية
+    # التحقق من صلاحية الوصول (تجربة أو اشتراك)
     is_active = days_left > 0 or (current_user.subscription_end and current_user.subscription_end > now)
     if not is_active: return redirect(url_for('subscribe'))
 
@@ -127,26 +127,45 @@ def edit_protocol(id):
 @app.route('/import-all-data')
 @login_required
 def import_all():
+    # هنا يتم وضع البيانات (أبقيتها مختصرة كما طلبت، يمكنك إضافة الـ 22 هنا لاحقاً)
     full_data = [
         {"n": "Lumbar Disc Herniation (Sciatica)", "k": "disc, sciatica", "d": "Nerve root compression.", "et": "IFC", "ep": "4000Hz", "er": "Pain relief", "ut": "Thermal US", "up": "1MHz", "ur": "Spasm relief", "ex": "McKenzie Extension", "img": "back.jpg"},
         {"n": "Knee Osteoarthritis", "k": "knee, oa, خشونة", "d": "Joint wear.", "et": "NMES", "ep": "50Hz", "er": "Quad strength", "ut": "US", "up": "1MHz", "ur": "Pain relief", "ex": "SLR, Mini Squats", "img": "knee.jpg"}
     ]
     db.create_all()
     for i in full_data:
+        # التأكد من عدم التكرار
         if not Protocol.query.filter_by(disease_name=i['n']).first():
             db.session.add(Protocol(disease_name=i['n'], keywords=i['k'], description=i['d'], estim_type=i['et'], estim_params=i['ep'], estim_role=i['er'], us_type=i['ut'], us_params=i['up'], us_role=i['ur'], exercises_list=i['ex'], electrode_image=i['img']))
     db.session.commit()
-    return "✅ 22 Protocols imported safely!"
+    return "✅ Protocols imported successfully!"
 
-# --- مسار الإصلاح (شغله مرة واحدة فقط لحل مشكلة الخطأ) ---
+# --- مسار الإصلاح الشامل (المعدل) ---
 @app.route('/fix-db')
 def fix_db_column():
     try:
         with db.engine.connect() as conn:
-            # هذا الأمر يضيف العمود الناقص لجدول المستخدمين في قاعدة البيانات الحية
+            # 1. إصلاح جدول المستخدمين (إضافة خانة الاشتراك)
             conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS subscription_end TIMESTAMP'))
+            
+            # 2. إصلاح جدول البروتوكولات (إضافة الخانات الجديدة عشان ميعملش Error 500)
+            columns_to_add = [
+                "description TEXT",
+                "estim_type VARCHAR(200)",
+                "estim_params TEXT",
+                "estim_role TEXT",
+                "us_type VARCHAR(200)",
+                "us_params TEXT",
+                "us_role TEXT",
+                "exercises_list TEXT",
+                "electrode_image VARCHAR(500)"
+            ]
+            
+            for col in columns_to_add:
+                conn.execute(text(f'ALTER TABLE protocol ADD COLUMN IF NOT EXISTS {col}'))
+
             conn.commit()
-        return "<h1>✅ Database Fixed! Column 'subscription_end' added successfully.</h1><a href='/'>Go Home</a>"
+        return "<h1>✅ Database Fully Fixed (Users + Protocols)!</h1><p>الان يمكنك استخدام الموقع بأمان.</p><a href='/'>Go Home</a>"
     except Exception as e:
         return f"<h1>Error: {str(e)}</h1>"
 
