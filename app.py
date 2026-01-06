@@ -52,7 +52,7 @@ class Protocol(db.Model):
     exercises_list = db.Column(db.Text)
     exercises_role = db.Column(db.Text)
     source_ref = db.Column(db.String(300))
-    electrode_image = db.Column(db.Text)  # نوع Text لاستيعاب الصور المشفرة
+    electrode_image = db.Column(db.Text)  # يدعم الصور المشفرة
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
@@ -71,7 +71,6 @@ def admin_required(f):
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # التحقق من الاشتراك
     if not current_user.is_admin:
         days_passed = (datetime.utcnow() - current_user.created_at).days
         days_left = 30 - days_passed
@@ -81,7 +80,6 @@ def home():
     else:
         days_left = "Unlimited (Admin)"
 
-    # البحث
     result = None
     search_query = request.args.get('disease') or request.form.get('disease')
     if search_query:
@@ -95,7 +93,6 @@ def home():
 
 @app.route('/subscription')
 def subscription_expired():
-    # يمكن إنشاء ملف subscribe.html أو استخدام كود مباشر هنا
     return render_template('subscribe.html') 
 
 @app.route('/admin')
@@ -104,17 +101,15 @@ def admin_dashboard():
     protocols = Protocol.query.all()
     return render_template('admin.html', protocols=protocols)
 
-# --- إضافة بروتوكول (يدعم الصور) ---
+# --- إضافة بروتوكول ---
 @app.route('/admin/add', methods=['GET', 'POST'])
 @admin_required
 def add_protocol():
     if request.method == 'POST':
         image_data = ""
-        # 1. فحص هل تم رفع ملف؟
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
             if file.filename != '':
-                # 2. تحويل الصورة لكود Base64
                 encoded_string = base64.b64encode(file.read()).decode('utf-8')
                 image_data = f"data:image/jpeg;base64,{encoded_string}"
         
@@ -131,7 +126,7 @@ def add_protocol():
             exercises_list=request.form['exercises_list'],
             exercises_role=request.form['exercises_role'],
             source_ref=request.form['source_ref'],
-            electrode_image=image_data # حفظ الكود (أو يترك فارغاً)
+            electrode_image=image_data
         )
         db.session.add(p)
         db.session.commit()
@@ -139,7 +134,7 @@ def add_protocol():
         return redirect(url_for('admin_dashboard'))
     return render_template('add_protocol.html')
 
-# --- تعديل بروتوكول (يدعم الصور) ---
+# --- تعديل بروتوكول ---
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
 def edit_protocol(id):
@@ -158,7 +153,6 @@ def edit_protocol(id):
         p.exercises_role = request.form['exercises_role']
         p.source_ref = request.form['source_ref']
         
-        # تحديث الصورة فقط لو الأدمن رفع ملف جديد
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
             if file.filename != '':
@@ -179,7 +173,7 @@ def delete_protocol(id):
     flash('Protocol Deleted', 'warning')
     return redirect(url_for('admin_dashboard'))
 
-# --- تسجيل الدخول والنسيان ---
+# --- المصادقة ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -210,28 +204,56 @@ def register():
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))
 
-# --- التثبيت (Setup) ---
-def get_full_medical_data():
-    # هنا الـ 20 مرض الأصليين (تم اختصارها هنا، لكن تأكد من وجودها في الكود عندك)
-    # الصور هنا نضع أسماءها النصية فقط (مثل knee.jpg) والكود في index.html سيعالجها
-    return [
-        {"n": "Adhesive Capsulitis", "k": "frozen shoulder", "d": "Stiffness/Pain", "et": "TENS", "ep": "100Hz", "er": "Pain", "ut": "US", "up": "1MHz", "ur": "Heat", "ex": "Pendulum", "ex_r": "ROM", "src": "Kisner", "img": "shoulder.jpg"},
-        # ... (باقي الأمراض كما هي)
-    ]
-
+# --- التثبيت (الكامل مع البيانات) ---
 @app.route('/setup-system')
 def setup_system():
     try:
-        db.drop_all(); db.create_all()
-        admin_email = "admin@physio.com"; admin_pass = "admin123"
+        # مسح القديم وإنشاء الجديد
+        db.drop_all()
+        db.create_all()
+        
+        # إنشاء الأدمن
+        admin_email = "admin@physio.com"
+        admin_pass = "admin123"
         hashed_pw = generate_password_hash(admin_pass, method='pbkdf2:sha256')
         db.session.add(User(email=admin_email, password=hashed_pw, is_admin=True))
         
-        # إضافة البيانات الافتراضية
-        # (يمكنك نسخ قائمة البيانات كاملة من الكود السابق هنا)
+        # قائمة الأمراض الكاملة (بدون اختصارات)
+        protocols_data = [
+            {"n": "Adhesive Capsulitis", "k": "frozen shoulder, stiff", "d": "Stiffness and pain in the shoulder joint.", "et": "TENS", "ep": "100Hz, continuous", "er": "Pain relief", "ut": "Ultrasound", "up": "1.5 W/cm2, 1MHz", "ur": "Deep heating", "ex": "Pendulum, Wand exercises", "ex_r": "Increase ROM", "src": "Kisner & Colby", "img": "shoulder.jpg"},
+            {"n": "Knee Osteoarthritis", "k": "knee oa, pain, joint", "d": "Degenerative joint disease affecting the knee.", "et": "IFC", "ep": "Beat freq 80-150Hz", "er": "Pain modulation", "ut": "None", "up": "None", "ur": "None", "ex": "Quads setting, SLR", "ex_r": "Strengthening", "src": "Dutton", "img": "knee.jpg"},
+            {"n": "Low Back Pain (Mechanical)", "k": "lbp, back, lumbar", "d": "Pain in the lumbar region not due to radiculopathy.", "et": "TENS", "ep": "80-100Hz", "er": "Gate control", "ut": "IR Lamp", "up": "20 mins", "ur": "Relaxation", "ex": "McKenzie, Pelvic tilt", "ex_r": "Core stability", "src": "Magee", "img": "back.jpg"},
+            {"n": "Carpal Tunnel Syndrome", "k": "cts, wrist, hand", "d": "Median nerve compression at the wrist.", "et": "Ultrasound", "ep": "0.8 W/cm2, pulsed 20%", "er": "Anti-inflammatory", "ut": "US", "up": "See above", "ur": "Healing", "ex": "Tendon gliding", "ex_r": "Mobility", "src": "Brotzman", "img": "wrist.jpg"},
+            {"n": "Lateral Epicondylitis", "k": "tennis elbow", "d": "Inflammation of the extensor origin.", "et": "Laser", "ep": "4 J/cm2", "er": "Tissue repair", "ut": "Phonophoresis", "up": "1.0 W/cm2", "ur": "Drug delivery", "ex": "Eccentric wrist ext", "ex_r": "Remodeling", "src": "Kisner", "img": "elbow.jpg"},
+            {"n": "Stroke (Hemiplegia)", "k": "cva, neuro", "d": "Paralysis on one side of the body.", "et": "FES", "ep": "35Hz, 300us", "er": "Re-education", "ut": "None", "up": "None", "ur": "None", "ex": "Task-oriented training", "ex_r": "Neuroplasticity", "src": "Carr & Shepherd", "img": "stroke.jpg"},
+            {"n": "Bell's Palsy", "k": "facial, nerve", "d": "Facial nerve paralysis.", "et": "ESTR", "ep": "Interrupted DC", "er": "Muscle stimulation", "ut": "None", "up": "None", "ur": "None", "ex": "Facial expressions", "ex_r": "Function", "src": "Tidy's", "img": "face.jpg"},
+            {"n": "Cerebral Palsy (Spastic)", "k": "cp, child, peds", "d": "Motor disorder due to brain damage.", "et": "NMES", "ep": "Antagonist muscles", "er": "Reduce spasticity", "ut": "None", "up": "None", "ur": "None", "ex": "Stretching, NDT", "ex_r": "Function", "src": "Tecklin", "img": "cp.jpg"},
+            {"n": "Sciatica", "k": "nerve, leg pain", "d": "Pain radiating along the sciatic nerve.", "et": "TENS", "ep": "Burst mode", "er": "Endorphin release", "ut": "Hot Pack", "up": "20 mins", "ur": "Relaxation", "ex": "Nerve gliding", "ex_r": "Mobilization", "src": "Magee", "img": "sciatica.jpg"},
+            {"n": "Ankle Sprain", "k": "ankle, ligament", "d": "Ligament injury in the ankle.", "et": "Cryotherapy", "ep": "Ice 15 mins", "er": "Vasoconstriction", "ut": "US", "up": "Pulsed 20%", "ur": "Healing (Subacute)", "ex": "Proprioception", "ex_r": "Balance", "src": "Brotzman", "img": "ankle.jpg"},
+            {"n": "Plantar Fasciitis", "k": "foot, heel", "d": "Inflammation of the plantar fascia.", "et": "Ultrasound", "ep": "1.5 W/cm2 continuous", "er": "Extensibility", "ut": "Shockwave", "up": "2000 shocks", "ur": "Break adhesions", "ex": "Calf stretching", "ex_r": "Flexibility", "src": "Dutton", "img": "foot.jpg"},
+            {"n": "Neck Pain (Cervical Spondylosis)", "k": "neck, cervical", "d": "Degeneration of cervical spine.", "et": "IFT", "ep": "4000Hz base", "er": "Pain relief", "ut": "Hot Pack", "up": "15 mins", "ur": "Relaxation", "ex": "Chin tucks", "ex_r": "Posture", "src": "Maitland", "img": "neck.jpg"},
+            {"n": "Rotator Cuff Tendinitis", "k": "shoulder, cuff", "d": "Inflammation of shoulder tendons.", "et": "US", "ep": "1MHz, pulsed", "er": "Healing", "ut": "Laser", "up": "Low level", "ur": "Repair", "ex": "Isometrics", "ex_r": "Strength", "src": "Kisner", "img": "shoulder_cuff.jpg"},
+            {"n": "Patellofemoral Pain Syndrome", "k": "knee, runner", "d": "Pain around the kneecap.", "et": "Biofeedback", "ep": "VMO muscle", "er": "Re-education", "ut": "Ice", "up": "10 mins", "ur": "Pain", "ex": "VMO strengthening", "ex_r": "Tracking", "src": "Brotzman", "img": "knee_vmo.jpg"},
+            {"n": "Guillain-Barre Syndrome", "k": "gbs, neuro", "d": "Rapid-onset muscle weakness.", "et": "None", "ep": "Avoid fatigue", "er": "None", "ut": "None", "up": "None", "ur": "None", "ex": "PROM -> AAROM", "ex_r": "Maintain range", "src": "O'Sullivan", "img": "gbs.jpg"},
+            {"n": "Multiple Sclerosis", "k": "ms, neuro", "d": "Demyelinating disease.", "et": "Cooling vest", "ep": "Minimize heat", "er": "Performance", "ut": "None", "up": "None", "ur": "None", "ex": "Energy conservation", "ex_r": "Endurance", "src": "O'Sullivan", "img": "ms.jpg"},
+            {"n": "Rheumatoid Arthritis", "k": "ra, hand, joint", "d": "Autoimmune joint inflammation.", "et": "Paraffin Wax", "ep": "Dip method", "er": "Pain/Stiffness", "ut": "TENS", "up": "Conv. mode", "ur": "Pain", "ex": "Gentle AROM", "ex_r": "Mobility", "src": "Tidy's", "img": "hand_ra.jpg"},
+            {"n": "Scoliosis", "k": "spine, curve", "d": "Sideways curvature of the spine.", "et": "NMES", "ep": "Convex side", "er": "Muscle balance", "ut": "None", "up": "None", "ur": "None", "ex": "Schroth method", "ex_r": "Correction", "src": "Kisner", "img": "spine.jpg"},
+            {"n": "Achilles Tendinitis", "k": "heel, tendon", "d": "Overuse of the Achilles tendon.", "et": "US", "ep": "3MHz pulsed", "er": "Healing", "ut": "Eccentric load", "up": "Slow drop", "ur": "Remodeling", "ex": "Heel drops", "ex_r": "Strength", "src": "Brotzman", "img": "heel.jpg"},
+            {"n": "Fibromyalgia", "k": "fibro, pain", "d": "Widespread musculoskeletal pain.", "et": "TENS", "ep": "Burst/Acupuncture", "er": "Central pain", "ut": "Heat", "up": "General", "ur": "Relaxation", "ex": "Aerobic (Low impact)", "ex_r": "Endurance", "src": "Dutton", "img": "body.jpg"}
+        ]
+
+        for p in protocols_data:
+            new_p = Protocol(
+                disease_name=p["n"], keywords=p["k"], description=p["d"],
+                estim_type=p["et"], estim_params=p["ep"], estim_role=p["er"],
+                us_type=p["ut"], us_params=p["up"], us_role=p["ur"],
+                exercises_list=p["ex"], exercises_role=p["ex_r"],
+                source_ref=p["src"], electrode_image=p["img"]
+            )
+            db.session.add(new_p)
         
         db.session.commit()
-        return "<h1>✅ System Ready!</h1><a href='/login'>Login</a>"
+        return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
 
 if __name__ == '__main__':
