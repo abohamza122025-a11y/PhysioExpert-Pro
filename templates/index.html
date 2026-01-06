@@ -15,28 +15,37 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         
-        /* تعديل شريط التنقل للون أزرق فاتح احترافي */
         .navbar-custom {
-            background-color: #e3f2fd !important; /* لون أزرق فاتح مريح */
+            background-color: #e3f2fd !important; 
             border-bottom: 2px solid #bbdefb;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .navbar-custom .navbar-brand, .navbar-custom .nav-link, .navbar-custom .text-white-50 {
-            color: #1e3c72 !important; /* لون الخط أزرق داكن للوضوح */
+            color: #1e3c72 !important; 
         }
 
         .spec-badge { background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); border: 1px solid white; }
         .clinical-card { border-radius: 25px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        .dosage-item { background: #f8f9fa; border-radius: 15px; padding: 20px; border-bottom: 5px solid #0d6efd; }
-        .table-primary { --bs-table-bg: #1e3c72; --bs-table-color: #ffffff; }
+        .dosage-item { background: #f8f9fa; border-radius: 15px; padding: 20px; border-bottom: 5px solid #0d6efd; transition: 0.3s; }
+        .dosage-item:hover { transform: translateY(-5px); background: #fff; }
         
+        .table-primary { --bs-table-bg: #1e3c72; --bs-table-color: #ffffff; }
         .bg-medical-light { background-color: #e3f2fd !important; color: #1e3c72 !important; }
         .bg-medical-blue { background-color: #bbdefb !important; color: #0d47a1 !important; }
+
+        /* --- إعدادات الطباعة الاحترافية --- */
+        @media print {
+            .no-print, .navbar, .hero-section, footer, .btn, form { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .container { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+            .clinical-card { box-shadow: none !important; border: 1px solid #eee !important; border-radius: 0 !important; }
+            .card-header { background-color: #bbdefb !important; color: #0d47a1 !important; -webkit-print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body class="bg-light text-dark">
 
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top no-print">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">PHYSIO EXPERT PRO 🩺</a>
         <div class="ms-auto d-flex align-items-center">
@@ -48,7 +57,7 @@
     </div>
 </nav>
 
-<div class="hero-section text-center mb-5">
+<div class="hero-section text-center mb-5 no-print">
     <div class="container">
         <h1 class="display-3 fw-bold mb-3">Physio Expert Pro</h1>
         <p class="lead mb-5 opacity-75">Evidence-Based Physical Therapy Protocols</p>
@@ -65,12 +74,18 @@
 
 <div class="container">
     {% if result %}
+    <div class="text-end mb-3 no-print">
+        <button onclick="window.print()" class="btn btn-primary shadow-sm rounded-pill px-4">
+            <i class="fas fa-print me-2"></i> طباعة البروتوكول العلاجي (PDF)
+        </button>
+    </div>
+
     <div class="clinical-card card bg-white mb-5 overflow-hidden border">
         <div class="card-header bg-medical-blue p-4 border-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <span class="badge bg-primary px-3 py-2 mb-2" style="background-color: #1e3c72 !important;">{{ result.category }}</span>
-                    <h2 class="display-5 fw-bold mb-0">{{ result.disease_name }}</h2>
+                    <h2 class="display-5 fw-bold mb-0 text-dark">{{ result.disease_name }}</h2>
                 </div>
                 <div class="text-end">
                     <div class="bg-success text-white px-4 py-2 rounded-pill fw-bold shadow-sm">
@@ -96,21 +111,21 @@
             <div class="row g-4 mb-5">
                 <div class="col-md-4">
                     <div class="dosage-item text-center">
-                        <i class="fas fa-calendar-check fa-2x text-primary mb-3"></i>
+                        <i class="fas fa-calendar-check fa-2x fa-beat text-primary mb-3"></i>
                         <h6 class="text-muted small">FREQUENCY</h6>
                         <h5 class="fw-bold mb-0 text-dark">{{ result.ex_frequency }}</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="dosage-item text-center border-success">
-                        <i class="fas fa-dumbbell fa-2x text-success mb-3"></i>
+                        <i class="fas fa-dumbbell fa-2x fa-bounce text-success mb-3"></i>
                         <h6 class="text-muted small">INTENSITY</h6>
                         <h5 class="fw-bold mb-0 text-dark">{{ result.ex_intensity }}</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="dosage-item text-center border-warning">
-                        <i class="fas fa-chart-line fa-2x text-warning mb-3"></i>
+                        <i class="fas fa-chart-line fa-2x fa-fade text-warning mb-3"></i>
                         <h6 class="text-muted small">PROGRESSION</h6>
                         <h5 class="fw-bold mb-0 text-dark">Stage-Based</h5>
                     </div>
@@ -129,7 +144,7 @@
                     <tbody>
                         {% for ex in result.exercises_list | split_list %}
                         <tr>
-                            <td class="ps-4 py-3 fw-bold fs-5">
+                            <td class="ps-4 py-3 fw-bold fs-5 text-dark">
                                 <i class="fas fa-play-circle text-primary me-2"></i> {{ ex }}
                             </td>
                             <td><span class="text-muted small">{{ result.exercises_role }}</span></td>
@@ -160,7 +175,7 @@
     </div>
     {% endif %}
 
-    <footer class="text-center mt-5 mb-4 py-4 border-top">
+    <footer class="text-center mt-5 mb-4 py-4 border-top no-print">
         <p class="mb-1 fw-bold text-secondary">© 2026 Physio Expert Pro</p>
         <p class="small text-danger opacity-75 fw-bold">{{ disclaimer }}</p>
         <p class="small text-muted">Contact Specialist: {{ support_email }}</p>
