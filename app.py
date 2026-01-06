@@ -112,7 +112,15 @@ def home():
         ).first()
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
-
+@app.route('/admin/reset-user-password/<email>/<new_password>')
+@admin_required # فقط أنت كأدمن تستطيع عمل ذلك
+def manual_reset(email, new_password):
+    user = User.query.filter_by(email=email).first()
+    if user:
+        user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+        db.session.commit()
+        return f"✅ تم تغيير كلمة سر {email} بنجاح إلى: {new_password}"
+    return "❌ المستخدم غير موجود"
 @app.route('/subscription')
 def subscription_expired():
     return render_template('subscribe.html') 
@@ -349,6 +357,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
