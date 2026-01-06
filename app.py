@@ -127,18 +127,164 @@ def edit_protocol(id):
 @app.route('/import-all-data')
 @login_required
 def import_all():
-    # هنا يتم وضع البيانات (أبقيتها مختصرة كما طلبت، يمكنك إضافة الـ 22 هنا لاحقاً)
+    # بيانات طبية حقيقية ومفصلة
     full_data = [
-        {"n": "Lumbar Disc Herniation (Sciatica)", "k": "disc, sciatica", "d": "Nerve root compression.", "et": "IFC", "ep": "4000Hz", "er": "Pain relief", "ut": "Thermal US", "up": "1MHz", "ur": "Spasm relief", "ex": "McKenzie Extension", "img": "back.jpg"},
-        {"n": "Knee Osteoarthritis", "k": "knee, oa, خشونة", "d": "Joint wear.", "et": "NMES", "ep": "50Hz", "er": "Quad strength", "ut": "US", "up": "1MHz", "ur": "Pain relief", "ex": "SLR, Mini Squats", "img": "knee.jpg"}
+        {
+            "n": "Adhesive Capsulitis (Frozen Shoulder)",
+            "k": "frozen shoulder, كتف, تيبس, adhesive",
+            "d": "Pain and stiffness in the shoulder capsule. Treatment focuses on regaining ROM.",
+            "et": "TENS / IFC",
+            "ep": "Frequency: 100Hz (Pain), 4000Hz (IFC). Duration: 20 min.",
+            "er": "Pain modulation to allow mobilization.",
+            "ut": "Continuous Ultrasound",
+            "up": "Frequency: 1MHz/3MHz. Intensity: 1.5 w/cm2 (Deep heat). Time: 5-8 min.",
+            "ur": "Deep heating to increase tissue extensibility before stretching.",
+            "ex": "Pendulum, Wand exercises, Wall climbing, Posterior capsule stretch.",
+            "img": "shoulder.jpg"
+        },
+        {
+            "n": "Lumbar Disc Herniation (Sciatica)",
+            "k": "disc, sciatica, back pain, انزلاق غضروفي, عرق النسا",
+            "d": "Nucleus pulposus protruding through annulus fibrosus compressing nerve root.",
+            "et": "TENS (Burst Mode) / IFC",
+            "ep": "Low rate TENS (2-4Hz) for chronic pain. IFC Vector scan.",
+            "er": "Pain relief and muscle relaxation.",
+            "ut": "Pulsed Ultrasound (if acute) / Thermal (if chronic)",
+            "up": "1 MHz, 1.0-1.5 w/cm2 paraspinal muscles.",
+            "ur": "Reduce muscle spasm in paraspinal muscles.",
+            "ex": "McKenzie Extension, Core stability, Cat-Camel, Nerve gliding.",
+            "img": "back.jpg"
+        },
+        {
+            "n": "Knee Osteoarthritis",
+            "k": "knee, oa, خشونة, ركبة, arthritis",
+            "d": "Degeneration of joint cartilage and underlying bone.",
+            "et": "NMES (Russian Current)",
+            "ep": "Carrier Freq: 2500Hz. Burst: 50Hz. On/Off: 10/50 sec.",
+            "er": "Strengthening Quadriceps muscle (VMO).",
+            "ut": "Continuous Ultrasound",
+            "up": "1 MHz, 1.2 w/cm2 around joint line.",
+            "ur": "Pain relief and improving circulation.",
+            "ex": "Straight Leg Raise (SLR), Terminal Knee Extension (TKE), Mini Squats.",
+            "img": "knee.jpg"
+        },
+        {
+            "n": "Lateral Epicondylitis (Tennis Elbow)",
+            "k": "elbow, tennis, kوع, التهاب",
+            "d": "Inflammation of the extensor tendons at the elbow.",
+            "et": "TENS / Iontophoresis",
+            "ep": "Conventional TENS 100Hz for pain control.",
+            "er": "Pain management during activity.",
+            "ut": "Pulsed Ultrasound",
+            "up": "3 MHz, 0.8 w/cm2, Duty Cycle 20% (Sub-acute).",
+            "ur": "Promote healing and collagen alignment.",
+            "ex": "Eccentric wrist extension, Grip strengthening, Stretching.",
+            "img": "elbow.jpg"
+        },
+        {
+            "n": "Cervical Spondylosis",
+            "k": "neck, cervical, رقبة, خشونة الفقرات",
+            "d": "Age-related wear and tear affecting spinal disks in the neck.",
+            "et": "TENS / IFC",
+            "ep": "Frequency: 80-100Hz. Electrodes: Paraspinal cervical.",
+            "er": "Relieve neck pain and tension headaches.",
+            "ut": "Continuous Ultrasound",
+            "up": "3 MHz (superficial), 1.0 w/cm2 on upper trapezius.",
+            "ur": "Relax upper trapezius spasm.",
+            "ex": "Chin tucks, Neck Isometrics, Scapular retraction.",
+            "img": "neck.jpg"
+        },
+        {
+            "n": "Plantar Fasciitis",
+            "k": "foot, heel, plantar, شوكة عظمية, قدم",
+            "d": "Inflammation of the plantar fascia tissue.",
+            "et": "High Voltage Pulsed Current (HVPC)",
+            "ep": "Negative polarity if edema present. 100Hz.",
+            "er": "Pain relief and edema reduction.",
+            "ut": "Continuous Ultrasound",
+            "up": "3 MHz or 1 MHz, 1.5 w/cm2 over fascia.",
+            "ur": "Deep heat to stretch fascia.",
+            "ex": "Calf stretching, Rolling bottle/ball, Towel curl.",
+            "img": "foot.jpg"
+        },
+        {
+            "n": "Bell's Palsy",
+            "k": "face, facial, seventh nerve, عصب سابع",
+            "d": "Sudden weakness in the muscles on one half of the face.",
+            "et": "Interrupted Direct Current (IDC)",
+            "ep": "Pulse duration: 100-300ms (long duration for denervated muscle).",
+            "er": "Maintain muscle properties until nerve regenerates.",
+            "ut": "Not commonly used.",
+            "up": "None.",
+            "ur": "None.",
+            "ex": "Facial expressions (smile, frown, close eyes), Kabat rehab.",
+            "img": "face.jpg"
+        },
+        {
+            "n": "Carpal Tunnel Syndrome",
+            "k": "wrist, hand, carpal, نفق رسغي",
+            "d": "Compression of the median nerve as it travels through the wrist.",
+            "et": "TENS",
+            "ep": "Conventional TENS over wrist area.",
+            "er": "Symptom management.",
+            "ut": "Pulsed Ultrasound",
+            "up": "3 MHz, 0.5-0.8 w/cm2, 20% duty cycle.",
+            "ur": "Reduce inflammation inside the tunnel.",
+            "ex": "Tendon gliding, Median nerve gliding, Wrist splinting.",
+            "img": "wrist.jpg"
+        },
+        {
+            "n": "Ankle Sprain (Lateral)",
+            "k": "ankle, sprain, ligament, التواء, كاحل",
+            "d": "Injury to the lateral ligaments (ATFL) of the ankle.",
+            "et": "IFC / High Voltage",
+            "ep": "80-150Hz for acute pain and edema.",
+            "er": "Edema control and pain relief.",
+            "ut": "Pulsed Ultrasound",
+            "up": "3 MHz, 0.5 w/cm2, 20% (Acute phase).",
+            "ur": "Accelerate tissue healing.",
+            "ex": "RICE protocol, Ankle pumps, Balance board, Calf raises.",
+            "img": "ankle.jpg"
+        },
+        {
+            "n": "Supraspinatus Tendinitis",
+            "k": "shoulder, rotator cuff, tendinitis, وتر الكتف",
+            "d": "Inflammation of the supraspinatus tendon.",
+            "et": "TENS / IFC",
+            "ep": "100Hz bipolar.",
+            "er": "Pain control for therapy.",
+            "ut": "Pulsed Ultrasound",
+            "up": "3 MHz (if superficial) or 1 MHz, 1.0 w/cm2 pulsed.",
+            "ur": "Reduce tendon inflammation.",
+            "ex": "Pendulum, Isometric abduction, Scapular stabilization.",
+            "img": "shoulder.jpg"
+        }
     ]
-    db.create_all()
+
+    count = 0
     for i in full_data:
-        # التأكد من عدم التكرار
-        if not Protocol.query.filter_by(disease_name=i['n']).first():
-            db.session.add(Protocol(disease_name=i['n'], keywords=i['k'], description=i['d'], estim_type=i['et'], estim_params=i['ep'], estim_role=i['er'], us_type=i['ut'], us_params=i['up'], us_role=i['ur'], exercises_list=i['ex'], electrode_image=i['img']))
+        # البحث عن البروتوكول بالاسم، إذا وجد نقوم بتحديثه، وإذا لم يوجد ننشئه
+        p = Protocol.query.filter_by(disease_name=i['n']).first()
+        if not p:
+            p = Protocol()
+            db.session.add(p)
+            count += 1
+        
+        # تحديث البيانات (سواء كان جديد أو قديم) لضمان ملء الخانات الفارغة
+        p.disease_name = i['n']
+        p.keywords = i['k']
+        p.description = i['d']
+        p.estim_type = i['et']
+        p.estim_params = i['ep']
+        p.estim_role = i['er']
+        p.us_type = i['ut']
+        p.us_params = i['up']
+        p.us_role = i['ur']
+        p.exercises_list = i['ex']
+        p.electrode_image = i['img']
+
     db.session.commit()
-    return "✅ Protocols imported successfully!"
+    return f"✅ Successfully Updated/Imported {count} New Protocols, and refreshed existing ones!"
 
 # --- مسار الإصلاح الشامل (المعدل) ---
 @app.route('/fix-db')
@@ -195,3 +341,4 @@ def make_me_admin():
 if __name__ == '__main__':
     with app.app_context(): db.create_all()
     app.run(debug=True)
+
