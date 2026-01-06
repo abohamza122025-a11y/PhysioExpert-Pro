@@ -172,18 +172,19 @@ def edit_protocol(id):
         p.ex_frequency = request.form['ex_frequency']
         p.source_ref = request.form['source_ref']
         
-        # إذا رفعت صورة جديدة أثناء التعديل
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
             if file.filename != '':
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                p.electrode_image = f"/static/uploads/{filename}"
+                # استخدمنا Base64 هنا لضمان ثبات الصور كما اتفقنا
+                encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
         
         db.session.commit()
         flash(f'Protocol {p.disease_name} Updated!', 'success')
         return redirect(url_for('admin_dashboard'))
-return render_template('edit_protocol.html', protocol=p)# --- رفع بروتوكولات بالجملة عبر الإكسيل ---
+    
+    # تأكد أن هذا السطر مزاح للداخل (Tab) مرة واحدة ليكون تابعاً للدالة
+    return render_template('edit_protocol.html', protocol=p)
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
@@ -321,6 +322,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
