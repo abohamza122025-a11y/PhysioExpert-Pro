@@ -25,40 +25,33 @@
             <nav class="nav flex-column">
                 <a class="nav-link text-white mb-3" href="/"><i class="fas fa-home me-2"></i> View Site</a>
                 <a class="nav-link text-white mb-3" href="#add-manual"><i class="fas fa-plus me-2"></i> Add New</a>
-                <a class="nav-link text-white mb-3" href="#excel-upload"><i class="fas fa-file-excel me-2"></i> Bulk Upload</a>
                 <a class="nav-link text-white" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
             </nav>
         </div>
 
         <div class="col-md-10 p-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold">Management Dashboard</h2>
-                <span class="badge bg-primary p-2">Logged in as: {{ current_user.email }}</span>
-            </div>
-
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, message in messages %}
                   <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    {{ message }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                   </div>
                 {% endfor %}
               {% endif %}
             {% endwith %}
 
             <div class="row g-4">
-                <div class="col-lg-8" id="add-manual">
+                <div class="col-lg-12" id="add-manual">
                     <div class="card shadow-sm">
                         <div class="card-body p-4">
                             <h4 class="section-title">Add New Clinical Protocol</h4>
                             <form action="/admin/add-manual" method="POST" enctype="multipart/form-data">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">Disease Name</label>
                                         <input type="text" name="disease_name" class="form-control" placeholder="e.g. Lumbar Disc" required>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">Category</label>
                                         <select name="category" class="form-select">
                                             <option value="Orthopedics">Orthopedics</option>
@@ -67,45 +60,75 @@
                                             <option value="Sports Medicine">Sports Medicine</option>
                                         </select>
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Clinical Presentation (Description)</label>
-                                        <textarea name="description" class="form-control" rows="3"></textarea>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label"><i class="fas fa-bolt text-warning"></i> Electro Params</label>
-                                        <input type="text" name="estim_params" class="form-control" placeholder="100Hz, 20 mins">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label"><i class="fas fa-wave-square text-info"></i> Ultrasound Params</label>
-                                        <input type="text" name="us_params" class="form-control" placeholder="1.5 W/cm2, Pulsed">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Keywords (for search)</label>
+                                        <input type="text" name="keywords" class="form-control" placeholder="knee, pain, stiffness" required>
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label">Exercises List (Separate with comma ,)</label>
-                                        <input type="text" name="exercises_list" class="form-control" placeholder="Squat, Lunges, SLR">
+                                        <label class="form-label">Clinical Description</label>
+                                        <textarea name="description" class="form-control" rows="2"></textarea>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Electro Type</label>
+                                        <input type="text" name="estim_type" class="form-control" placeholder="TENS / IFC">
                                     </div>
                                     <div class="col-md-4">
+                                        <label class="form-label">Electro Params</label>
+                                        <input type="text" name="estim_params" class="form-control" placeholder="100Hz, 20min">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Electro Role</label>
+                                        <input type="text" name="estim_role" class="form-control" placeholder="Pain relief">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">US Type</label>
+                                        <input type="text" name="us_type" class="form-control" placeholder="Thermal / Pulsed">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">US Params</label>
+                                        <input type="text" name="us_params" class="form-control" placeholder="1.5 W/cm2">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">US Role</label>
+                                        <input type="text" name="us_role" class="form-control" placeholder="Deep heating">
+                                    </div>
+
+                                    <div class="col-md-8">
+                                        <label class="form-label">Exercises (comma separated)</label>
+                                        <input type="text" name="exercises_list" class="form-control" placeholder="SLR, Bridges, Squats">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Exercises Role</label>
+                                        <input type="text" name="exercises_role" class="form-control" placeholder="Strengthening">
+                                    </div>
+                                    
+                                    <div class="col-md-3">
                                         <label class="form-label">Frequency</label>
-                                        <input type="text" name="ex_frequency" class="form-control" placeholder="Daily / 3x week">
+                                        <input type="text" name="ex_frequency" class="form-control" placeholder="3x/week">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label">Intensity</label>
                                         <input type="text" name="ex_intensity" class="form-control" placeholder="Moderate">
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Evidence Level</label>
-                                        <input type="text" name="evidence_level" class="form-control" value="Grade A">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Progression</label>
+                                        <input type="text" name="ex_progression" class="form-control" placeholder="Add weights">
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Scientific Reference</label>
-                                        <input type="text" name="source_ref" class="form-control" placeholder="Reference source...">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Source Ref</label>
+                                        <input type="text" name="source_ref" class="form-control" placeholder="Dutton 2024">
                                     </div>
-                                    <div class="col-12 bg-light p-3 rounded border">
-                                        <label class="form-label fw-bold text-primary"><i class="fas fa-image me-2"></i> Upload Electrode Placement Image</label>
+
+                                    <div class="col-12 bg-light p-3 rounded border mt-3">
+                                        <label class="form-label fw-bold text-primary"><i class="fas fa-image me-2"></i> Electrode Image</label>
                                         <input type="file" name="electrode_image" class="form-control" accept="image/*">
                                     </div>
-                                    <div class="col-12 mt-4 text-center">
-                                        <button type="submit" class="btn btn-primary btn-pill px-5 fw-bold shadow-sm">
-                                            <i class="fas fa-save me-2"></i> SAVE NEW PROTOCOL
+
+                                    <div class="col-12 text-center mt-4">
+                                        <button type="submit" class="btn btn-primary btn-pill px-5 fw-bold shadow">
+                                            <i class="fas fa-save me-2"></i> SAVE PROTOCOL
                                         </button>
                                     </div>
                                 </div>
@@ -114,74 +137,39 @@
                     </div>
                 </div>
 
-                <div class="col-lg-4" id="excel-upload">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-body p-4 text-center">
-                            <h4 class="section-title text-start">Bulk Import</h4>
-                            <i class="fas fa-file-excel fa-4x text-success mb-4 mt-3"></i>
-                            <p class="text-muted">Upload an Excel file (.xlsx) to add hundreds of protocols instantly.</p>
-                            <form action="/admin/import-excel" method="POST" enctype="multipart/form-data">
-                                <div class="mb-4 text-start">
-                                    <label class="form-label">Select Excel File</label>
-                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls" required>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-pill w-100 fw-bold shadow-sm">
-                                    <i class="fas fa-cloud-upload-alt me-2"></i> START BULK SYNC
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12">
+                <div class="col-12 mt-5">
                     <div class="card shadow-sm table-card">
                         <div class="card-header bg-dark text-white p-3">
-                            <h5 class="mb-0"><i class="fas fa-list me-2"></i> Existing Protocols List</h5>
+                            <h5 class="mb-0">Existing Protocols</h5>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="ps-4">Condition Name</th>
-                                            <th>Category</th>
-                                            <th>Image Status</th>
-                                            <th class="text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for p in protocols %}
-                                        <tr>
-                                            <td class="ps-4 fw-bold text-primary">{{ p.disease_name }}</td>
-                                            <td>{{ p.category }}</td>
-                                            <td>
-                                                {% if p.electrode_image %}
-                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Image Set</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">No Image</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-center">
-                                                <a href="/admin/edit/{{ p.id }}" class="btn btn-sm btn-warning me-1">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </a>
-                                                <a href="/admin/delete/{{ p.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this protocol?')">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Disease</th>
+                                        <th>Category</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in protocols %}
+                                    <tr>
+                                        <td class="ps-4 fw-bold">{{ p.disease_name }}</td>
+                                        <td>{{ p.category }}</td>
+                                        <td class="text-center">
+                                            <a href="/admin/edit/{{ p.id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Edit</a>
+                                            <a href="/admin/delete/{{ p.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                </div>
+            </div>
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
