@@ -255,10 +255,10 @@ def setup_system():
         db.session.commit()
         return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
-
 if __name__ == '__main__':
-    with app.app_context(): db.create_all()
-   app.run(debug=False)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=False)
 
 
 
