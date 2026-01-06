@@ -214,7 +214,7 @@ def setup_system():
         
         # إنشاء الأدمن
         admin_email = "admin@physio.com"
-        admin_pass = "admin123"
+        admin_pass = "AboHamzaPhysioadmin2026"
         hashed_pw = generate_password_hash(admin_pass, method='pbkdf2:sha256')
         db.session.add(User(email=admin_email, password=hashed_pw, is_admin=True))
         
@@ -259,3 +259,4 @@ def setup_system():
 if __name__ == '__main__':
     with app.app_context(): db.create_all()
     app.run(debug=True)
+
