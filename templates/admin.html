@@ -3,212 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physio Expert Pro 2026</title>
+    <title>Admin Dashboard - Physio Expert</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* --- التنسيقات العامة --- */
-        .hero-section { 
-            background: linear-gradient(135deg, #1e3c72, #2a5298, #2c5364); 
-            color: white; padding: 80px 0; border-radius: 0 0 40px 40px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .navbar-custom {
-            background-color: #e3f2fd !important; 
-            border-bottom: 2px solid #bbdefb;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .navbar-custom .navbar-brand, .navbar-custom .nav-link { color: #1e3c72 !important; }
-        .clinical-card { border-radius: 25px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        .dosage-item { background: #f8f9fa; border-radius: 15px; padding: 20px; border-bottom: 5px solid #0d6efd; transition: 0.3s; }
-        .dosage-item:hover { transform: translateY(-5px); background: #fff; }
-        .bg-medical-light { background-color: #e3f2fd !important; color: #1e3c72 !important; }
-        .bg-medical-blue { background-color: #bbdefb !important; color: #0d47a1 !important; }
-
-        /* --- أنيميشن الأيقونات الطبية --- */
-        .fa-bolt { animation: lightning 2s infinite; }
-        .fa-wave-square { animation: pulse-wave 2s infinite; }
-        @keyframes lightning {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); color: #ffc107; }
-        }
-        @keyframes pulse-wave {
-            0% { transform: scaleX(1); }
-            50% { transform: scaleX(1.2); color: #00bcd4; }
-            100% { transform: scaleX(1); }
-        }
-
-        /* --- إعدادات الطباعة الاحترافية --- */
-        @media print {
-            .no-print, .navbar, .hero-section, footer, .btn, form { display: none !important; }
-            body { background: white !important; }
-            .container { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
-            .clinical-card { box-shadow: none !important; border: 1px solid #eee !important; }
-            .card-header { background-color: #bbdefb !important; -webkit-print-color-adjust: exact; }
-        }
+        body { background-color: #f4f7f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .admin-sidebar { background: #1e3c72; color: white; min-height: 100vh; padding: 20px; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-pill { border-radius: 50px; }
+        .form-label { font-weight: 600; color: #444; }
+        .section-title { border-left: 5px solid #0d6efd; padding-left: 15px; margin-bottom: 25px; color: #1e3c72; }
     </style>
 </head>
-<body class="bg-light text-dark">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top no-print">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/">PHYSIO EXPERT PRO 🩺</a>
-        <div class="ms-auto d-flex align-items-center">
-            {% if current_user.is_authenticated %}
-                <span class="text-primary me-3 small fw-bold">Admin Mode: {{ current_user.email }}</span>
-                <a href="/logout" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Logout</a>
-            {% endif %}
-        </div>
-    </div>
-</nav>
-
-<div class="hero-section text-center mb-5 no-print">
-    <div class="container">
-        <h1 class="display-3 fw-bold mb-3">Physio Expert Pro</h1>
-        <p class="lead mb-5 opacity-75">Evidence-Based Physical Therapy Encyclopedia</p>
-        <div class="row justify-content-center">
-            <div class="col-md-7">
-                <form action="/" method="POST" class="input-group input-group-lg shadow-lg rounded-pill overflow-hidden">
-                    <input type="text" name="disease" class="form-control border-0 px-4" placeholder="Search condition or injury...">
-                    <button class="btn btn-warning px-5 fw-bold" type="submit">SEARCH</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="container">
-    {% if result %}
-    <div class="text-end mb-3 no-print">
-        <button onclick="window.print()" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
-            <i class="fas fa-print me-2"></i> Print Medical Protocol (PDF)
-        </button>
-    </div>
-
-    <div class="clinical-card card bg-white mb-5 overflow-hidden border">
-        <div class="card-header bg-medical-blue p-4 border-0">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="badge bg-primary px-3 py-2 mb-2 shadow-sm">{{ result.category }}</span>
-                    <h2 class="display-5 fw-bold mb-0 text-dark">{{ result.disease_name }}</h2>
-                </div>
-                <div class="text-end">
-                    <div class="bg-success text-white px-4 py-2 rounded-pill fw-bold shadow-sm">
-                        <i class="fas fa-check-shield me-2"></i> {{ result.evidence_level }}
-                    </div>
-                </div>
-            </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 admin-sidebar d-none d-md-block">
+            <h4 class="fw-bold mb-5 mt-3 text-center">ADMIN PANEL</h4>
+            <nav class="nav flex-column">
+                <a class="nav-link text-white mb-3" href="/"><i class="fas fa-home me-2"></i> View Site</a>
+                <a class="nav-link text-white mb-3" href="#add-manual"><i class="fas fa-plus me-2"></i> Add New</a>
+                <a class="nav-link text-white mb-3" href="#excel-upload"><i class="fas fa-file-excel me-2"></i> Bulk Upload</a>
+                <a class="nav-link text-white" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+            </nav>
         </div>
 
-        <div class="card-body p-4 p-lg-5">
-            <div class="row mb-5 text-center align-items-center">
-                <div class="col-lg-8 text-lg-start">
-                    <h4 class="fw-bold border-bottom pb-2 mb-3 text-primary">Clinical Presentation</h4>
-                    <p class="fs-5 lh-base text-dark">{{ result.description }}</p>
-                </div>
-                <div class="col-lg-4 mt-4 mt-lg-0 text-center">
-                    {% if result.electrode_image %}
-                        <img src="{{ result.electrode_image }}" class="img-fluid rounded-4 shadow-sm border" style="max-height: 250px;">
-                    {% endif %}
-                </div>
+        <div class="col-md-10 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Management Dashboard</h2>
+                <span class="badge bg-primary p-2">Logged in as: {{ current_user.email }}</span>
             </div>
 
-            
-            <div class="row g-4 mb-5">
-                <div class="col-md-6">
-                    <div class="dosage-item h-100 border-primary" style="background: #f0f7ff;">
-                        <i class="fas fa-bolt fa-3x text-primary mb-3"></i>
-                        <h5 class="fw-bold text-primary">Electrotherapy (ESTIM)</h5>
-                        <hr>
-                        <p class="mb-1 text-dark"><strong>Type:</strong> {{ result.estim_type }}</p>
-                        <p class="mb-1 text-dark"><strong>Params:</strong> {{ result.estim_params }}</p>
-                        <small class="text-muted">Goal: {{ result.estim_role }}</small>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="dosage-item h-100 border-success" style="background: #f6fff8;">
-                        <i class="fas fa-wave-square fa-3x text-success mb-3"></i>
-                        <h5 class="fw-bold text-success">Ultrasound (US)</h5>
-                        <hr>
-                        <p class="mb-1 text-dark"><strong>Type:</strong> {{ result.us_type }}</p>
-                        <p class="mb-1 text-dark"><strong>Params:</strong> {{ result.us_params }}</p>
-                        <small class="text-muted">Goal: {{ result.us_role }}</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4 mb-5">
-                <div class="col-md-4">
-                    <div class="dosage-item text-center">
-                        <i class="fas fa-calendar-check fa-2x fa-beat text-primary mb-3"></i>
-                        <h6 class="text-muted small fw-bold">FREQUENCY</h6>
-                        <h5 class="fw-bold mb-0 text-dark">{{ result.ex_frequency }}</h5>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="dosage-item text-center border-success">
-                        <i class="fas fa-dumbbell fa-2x fa-bounce text-success mb-3"></i>
-                        <h6 class="text-muted small fw-bold">INTENSITY</h6>
-                        <h5 class="fw-bold mb-0 text-dark">{{ result.ex_intensity }}</h5>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="dosage-item text-center border-warning">
-                        <i class="fas fa-chart-line fa-2x fa-fade text-warning mb-3"></i>
-                        <h6 class="text-muted small fw-bold">PROGRESSION</h6>
-                        <h5 class="fw-bold mb-0 text-dark">Stage-Based</h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="table-responsive mb-5 rounded-4 shadow-sm border">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-primary text-white">
-                        <tr class="py-3">
-                            <th class="ps-4">Evidence-Based Exercise Item</th>
-                            <th>Rationale / Goal</th>
-                            <th>Instruction</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ex in result.exercises_list | split_list %}
-                        <tr>
-                            <td class="ps-4 py-3 fw-bold fs-5 text-dark">
-                                <i class="fas fa-play-circle text-primary me-2"></i> {{ ex }}
-                            </td>
-                            <td><span class="text-muted small">{{ result.exercises_role }}</span></td>
-                            <td><span class="badge bg-light text-dark border">Scientific Protocol</span></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
 
             <div class="row g-4">
-                <div class="col-md-7">
-                    <div class="p-4 rounded-4 bg-info-subtle border-start border-info border-5 h-100 shadow-sm">
-                        <h5 class="fw-bold text-info-emphasis"><i class="fas fa-step-forward"></i> PROGRESSION CRITERIA</h5>
-                        <p class="mb-0 fs-5 lh-base italic text-dark">{{ result.ex_progression }}</p>
+                <div class="col-lg-8" id="add-manual">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h4 class="section-title">Add New Clinical Protocol</h4>
+                            <form action="/admin/add-manual" method="POST" enctype="multipart/form-data">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Disease Name</label>
+                                        <input type="text" name="disease_name" class="form-control" placeholder="e.g. Lumbar Disc" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Category</label>
+                                        <select name="category" class="form-select">
+                                            <option value="Orthopedics">Orthopedics</option>
+                                            <option value="Neurology">Neurology</option>
+                                            <option value="Pediatrics">Pediatrics</option>
+                                            <option value="Sports Medicine">Sports Medicine</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Clinical Presentation (Description)</label>
+                                        <textarea name="description" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label"><i class="fas fa-bolt text-warning"></i> Electro Params</label>
+                                        <input type="text" name="estim_params" class="form-control" placeholder="100Hz, 20 mins">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><i class="fas fa-wave-square text-info"></i> Ultrasound Params</label>
+                                        <input type="text" name="us_params" class="form-control" placeholder="1.5 W/cm2, Pulsed">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label">Exercises List (Separate with comma ,)</label>
+                                        <input type="text" name="exercises_list" class="form-control" placeholder="Squat, Lunges, SLR">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Frequency</label>
+                                        <input type="text" name="ex_frequency" class="form-control" placeholder="Daily / 3x week">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Intensity</label>
+                                        <input type="text" name="ex_intensity" class="form-control" placeholder="Moderate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Evidence Level</label>
+                                        <input type="text" name="evidence_level" class="form-control" value="Grade A">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label">Scientific Reference</label>
+                                        <input type="text" name="source_ref" class="form-control" placeholder="Reference source...">
+                                    </div>
+
+                                    <div class="col-12 bg-light p-3 rounded border">
+                                        <label class="form-label fw-bold text-primary"><i class="fas fa-image me-2"></i> Upload Electrode Placement Image</label>
+                                        <input type="file" name="electrode_image" class="form-control" accept="image/*">
+                                        <small class="text-muted">Select an image from your computer to show it in the protocol.</small>
+                                    </div>
+
+                                    <div class="col-12 mt-4 text-center">
+                                        <button type="submit" class="btn btn-primary btn-pill px-5 fw-bold shadow-sm">
+                                            <i class="fas fa-save me-2"></i> SAVE NEW PROTOCOL
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-5">
-                    <div class="p-4 rounded-4 bg-medical-light h-100 shadow-sm border border-primary-subtle">
-                        <h6 class="fw-bold text-primary"><i class="fas fa-book"></i> SCIENTIFIC REFERENCE</h6>
-                        <p class="small mb-0 text-dark fw-bold">{{ result.source_ref }}</p>
-                        <hr class="bg-primary opacity-25">
-                        <small class="text-danger fw-bold"><i class="fas fa-warning"></i> Safety First: Monitor VAS Scale.</small>
+
+                <div class="col-lg-4" id="excel-upload">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body p-4 text-center">
+                            <h4 class="section-title text-start">Bulk Import</h4>
+                            <i class="fas fa-file-excel fa-4x text-success mb-4 mt-3"></i>
+                            <p class="text-muted">Upload an Excel file (.xlsx) to add hundreds of protocols instantly.</p>
+                            
+                            <form action="/admin/import-excel" method="POST" enctype="multipart/form-data">
+                                <div class="mb-4 text-start">
+                                    <label class="form-label">Select Excel File</label>
+                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls" required>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-pill w-100 fw-bold shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i> START BULK SYNC
+                                </button>
+                            </form>
+                            <hr>
+                            <div class="alert alert-info small text-start">
+                                <strong>Note:</strong> Columns must match: <code>disease_name</code>, <code>exercises_list</code>, etc.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <footer class="text-center mt-5 mb-4 py-4 border-top no-print">
-        <p class="mb-1 fw-bold text-secondary">© 2026 Physio Expert Pro - Professional Encyclopedia</p>
-        <p class="small text-danger opacity-75 fw-bold">{{ disclaimer }}</p>
-        <p class="small text-muted">Support: {{ support_email }}</p>
-    </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
