@@ -11,7 +11,10 @@ from werkzeug.utils import secure_filename  # لتأمين أسماء الصور
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_final_2026')
-
+@app.template_filter('split_list')
+def split_list_filter(s):
+    if not s: return []
+    return [item.strip() for item in s.split(',')]
 # --- إعدادات مجلد رفع الصور ---
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -346,6 +349,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
