@@ -183,9 +183,7 @@ def edit_protocol(id):
         db.session.commit()
         flash(f'Protocol {p.disease_name} Updated!', 'success')
         return redirect(url_for('admin_dashboard'))
-    
-    return render_template('edit_protocol.html', p=p)
-# --- رفع بروتوكولات بالجملة عبر الإكسيل ---
+return render_template('edit_protocol.html', protocol=p)# --- رفع بروتوكولات بالجملة عبر الإكسيل ---
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
@@ -323,5 +321,6 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
