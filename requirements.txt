@@ -5,3 +5,5 @@ gunicorn
 flask-sqlalchemy
 flask-mail
 psycopg2-binary
+pandas
+openpyxl
