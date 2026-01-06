@@ -13,6 +13,7 @@
         .btn-pill { border-radius: 50px; }
         .form-label { font-weight: 600; color: #444; }
         .section-title { border-left: 5px solid #0d6efd; padding-left: 15px; margin-bottom: 25px; color: #1e3c72; }
+        .table-card { margin-top: 30px; border-radius: 15px; overflow: hidden; }
     </style>
 </head>
 <body>
@@ -70,7 +71,6 @@
                                         <label class="form-label">Clinical Presentation (Description)</label>
                                         <textarea name="description" class="form-control" rows="3"></textarea>
                                     </div>
-                                    
                                     <div class="col-md-6">
                                         <label class="form-label"><i class="fas fa-bolt text-warning"></i> Electro Params</label>
                                         <input type="text" name="estim_params" class="form-control" placeholder="100Hz, 20 mins">
@@ -79,12 +79,10 @@
                                         <label class="form-label"><i class="fas fa-wave-square text-info"></i> Ultrasound Params</label>
                                         <input type="text" name="us_params" class="form-control" placeholder="1.5 W/cm2, Pulsed">
                                     </div>
-
                                     <div class="col-12">
                                         <label class="form-label">Exercises List (Separate with comma ,)</label>
                                         <input type="text" name="exercises_list" class="form-control" placeholder="Squat, Lunges, SLR">
                                     </div>
-
                                     <div class="col-md-4">
                                         <label class="form-label">Frequency</label>
                                         <input type="text" name="ex_frequency" class="form-control" placeholder="Daily / 3x week">
@@ -97,18 +95,14 @@
                                         <label class="form-label">Evidence Level</label>
                                         <input type="text" name="evidence_level" class="form-control" value="Grade A">
                                     </div>
-
                                     <div class="col-12">
                                         <label class="form-label">Scientific Reference</label>
                                         <input type="text" name="source_ref" class="form-control" placeholder="Reference source...">
                                     </div>
-
                                     <div class="col-12 bg-light p-3 rounded border">
                                         <label class="form-label fw-bold text-primary"><i class="fas fa-image me-2"></i> Upload Electrode Placement Image</label>
                                         <input type="file" name="electrode_image" class="form-control" accept="image/*">
-                                        <small class="text-muted">Select an image from your computer to show it in the protocol.</small>
                                     </div>
-
                                     <div class="col-12 mt-4 text-center">
                                         <button type="submit" class="btn btn-primary btn-pill px-5 fw-bold shadow-sm">
                                             <i class="fas fa-save me-2"></i> SAVE NEW PROTOCOL
@@ -126,7 +120,6 @@
                             <h4 class="section-title text-start">Bulk Import</h4>
                             <i class="fas fa-file-excel fa-4x text-success mb-4 mt-3"></i>
                             <p class="text-muted">Upload an Excel file (.xlsx) to add hundreds of protocols instantly.</p>
-                            
                             <form action="/admin/import-excel" method="POST" enctype="multipart/form-data">
                                 <div class="mb-4 text-start">
                                     <label class="form-label">Select Excel File</label>
@@ -136,14 +129,55 @@
                                     <i class="fas fa-cloud-upload-alt me-2"></i> START BULK SYNC
                                 </button>
                             </form>
-                            <hr>
-                            <div class="alert alert-info small text-start">
-                                <strong>Note:</strong> Columns must match: <code>disease_name</code>, <code>exercises_list</code>, etc.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card shadow-sm table-card">
+                        <div class="card-header bg-dark text-white p-3">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i> Existing Protocols List</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Condition Name</th>
+                                            <th>Category</th>
+                                            <th>Image Status</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in protocols %}
+                                        <tr>
+                                            <td class="ps-4 fw-bold text-primary">{{ p.disease_name }}</td>
+                                            <td>{{ p.category }}</td>
+                                            <td>
+                                                {% if p.electrode_image %}
+                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Image Set</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">No Image</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="/admin/edit/{{ p.id }}" class="btn btn-sm btn-warning me-1">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <a href="/admin/delete/{{ p.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this protocol?')">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+                </div>
         </div>
     </div>
 </div>
