@@ -1,14 +1,28 @@
 import os
 import base64
+import pandas as pd  # مكتبة معالجة الإكسيل
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename  # لتأمين أسماء الملفات المرفوعة
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_final_2026')
+
+# --- إعدادات مجلد رفع الصور ---
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# --- فلتر لتقسيم النصوص إلى قوائم (للتدريبات) ---
+@app.template_filter('split_list')
+def split_list_filter(s, delimiter=','):
+    if s:
+        return [x.strip() for x in s.split(delimiter)]
+    return []
 
 # --- 1. إعدادات قاعدة البيانات ---
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
@@ -40,6 +54,7 @@ class User(UserMixin, db.Model):
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(100)) # أضفنا التصنيف
     disease_name = db.Column(db.String(200), nullable=False)
     keywords = db.Column(db.String(500))
     description = db.Column(db.Text)
@@ -51,8 +66,13 @@ class Protocol(db.Model):
     us_role = db.Column(db.Text)
     exercises_list = db.Column(db.Text)
     exercises_role = db.Column(db.Text)
+    ex_frequency = db.Column(db.String(200)) # حقول إضافية للجرعات
+    ex_intensity = db.Column(db.String(200))
+    ex_progression = db.Column(db.Text)
+    evidence_level = db.Column(db.String(50))
     source_ref = db.Column(db.String(300))
-    electrode_image = db.Column(db.Text)  # يدعم الصور المشفرة
+    electrode_image = db.Column(db.Text)  # يدعم المسار أو التشفير
+    is_protected = db.Column(db.Boolean, default=False)
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
@@ -91,78 +111,76 @@ def home():
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
 
-@app.route('/subscription')
-def subscription_expired():
-    return render_template('subscribe.html') 
-
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
     protocols = Protocol.query.all()
     return render_template('admin.html', protocols=protocols)
 
-# --- إضافة بروتوكول ---
-@app.route('/admin/add', methods=['GET', 'POST'])
+# --- إضافة بروتوكول يدوي (مع دعم رفع الصورة من الكمبيوتر) ---
+@app.route('/admin/add-manual', methods=['POST'])
 @admin_required
-def add_protocol():
-    if request.method == 'POST':
-        image_data = ""
-        if 'electrode_image' in request.files:
-            file = request.files['electrode_image']
-            if file.filename != '':
-                encoded_string = base64.b64encode(file.read()).decode('utf-8')
-                image_data = f"data:image/jpeg;base64,{encoded_string}"
-        
-        p = Protocol(
-            disease_name=request.form['disease_name'],
-            keywords=request.form['keywords'],
-            description=request.form['description'],
-            estim_type=request.form['estim_type'],
-            estim_params=request.form['estim_params'],
-            estim_role=request.form['estim_role'],
-            us_type=request.form['us_type'],
-            us_params=request.form['us_params'],
-            us_role=request.form['us_role'],
-            exercises_list=request.form['exercises_list'],
-            exercises_role=request.form['exercises_role'],
-            source_ref=request.form['source_ref'],
-            electrode_image=image_data
-        )
-        db.session.add(p)
-        db.session.commit()
-        flash('Protocol Added Successfully!', 'success')
-        return redirect(url_for('admin_dashboard'))
-    return render_template('add_protocol.html')
+def add_manual():
+    image_path = ""
+    if 'electrode_image' in request.files:
+        file = request.files['electrode_image']
+        if file.filename != '':
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_path = f"/static/uploads/{filename}"
+    
+    p = Protocol(
+        disease_name=request.form['disease_name'],
+        category=request.form.get('category', 'General'),
+        keywords=request.form['keywords'],
+        description=request.form['description'],
+        estim_type=request.form['estim_type'],
+        estim_params=request.form['estim_params'],
+        estim_role=request.form['estim_role'],
+        us_type=request.form['us_type'],
+        us_params=request.form['us_params'],
+        us_role=request.form['us_role'],
+        exercises_list=request.form['exercises_list'],
+        exercises_role=request.form['exercises_role'],
+        ex_frequency=request.form.get('ex_frequency'),
+        ex_intensity=request.form.get('ex_intensity'),
+        source_ref=request.form['source_ref'],
+        electrode_image=image_path,
+        is_protected=False
+    )
+    db.session.add(p)
+    db.session.commit()
+    flash('Manual Protocol Added Successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
 
-# --- تعديل بروتوكول ---
-@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
+# --- رفع بروتوكولات بالجملة عبر الإكسيل ---
+@app.route('/admin/import-excel', methods=['POST'])
 @admin_required
-def edit_protocol(id):
-    p = Protocol.query.get_or_404(id)
-    if request.method == 'POST':
-        p.disease_name = request.form['disease_name']
-        p.keywords = request.form['keywords']
-        p.description = request.form['description']
-        p.estim_type = request.form['estim_type']
-        p.estim_params = request.form['estim_params']
-        p.estim_role = request.form['estim_role']
-        p.us_type = request.form['us_type']
-        p.us_params = request.form['us_params']
-        p.us_role = request.form['us_role']
-        p.exercises_list = request.form['exercises_list']
-        p.exercises_role = request.form['exercises_role']
-        p.source_ref = request.form['source_ref']
-        
-        if 'electrode_image' in request.files:
-            file = request.files['electrode_image']
-            if file.filename != '':
-                encoded_string = base64.b64encode(file.read()).decode('utf-8')
-                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
-        
-        db.session.commit()
-        flash('Protocol Updated!', 'success')
+def import_excel():
+    if 'excel_file' not in request.files:
+        flash('No file selected', 'danger')
         return redirect(url_for('admin_dashboard'))
-    return render_template('edit_protocol.html', protocol=p)
+    
+    file = request.files['excel_file']
+    try:
+        df = pd.read_excel(file)
+        for _, row in df.iterrows():
+            new_p = Protocol(
+                disease_name=str(row['disease_name']),
+                category=str(row.get('category', 'General')),
+                keywords=str(row.get('keywords', '')),
+                description=str(row.get('description', '')),
+                exercises_list=str(row['exercises_list']),
+                ex_frequency=str(row.get('ex_frequency', '3 times/week')),
+                evidence_level=str(row.get('evidence_level', 'Grade A')),
+                is_protected=False
+            )
+            db.session.add(new_p)
+        db.session.commit()
+        flash(f'Successfully imported {len(df)} protocols!', 'success')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'danger')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete/<int:id>')
 @admin_required
@@ -185,80 +203,11 @@ def login():
             flash('Login Failed. Check email/password', 'danger')
     return render_template('login.html')
 
-@app.route('/forgot-password')
-def forgot_password():
-    return render_template('forgot_password.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        try:
-            pw = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
-            db.session.add(User(email=request.form['email'], password=pw))
-            db.session.commit()
-            return redirect(url_for('login'))
-        except: flash('Email already exists', 'danger')
-    return render_template('register.html')
-
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))
 
-# --- التثبيت (الكامل مع البيانات) ---
-@app.route('/setup-sys-secure-hmna12-4-2026')
-def setup_system():
-    try:
-        # مسح القديم وإنشاء الجديد
-        db.drop_all()
-        db.create_all()
-        
-        # إنشاء الأدمن
-        admin_email = "admin@physio.com"
-        admin_pass = "AboHamzaPhysioadmin2026"
-        hashed_pw = generate_password_hash(admin_pass, method='pbkdf2:sha256')
-        db.session.add(User(email=admin_email, password=hashed_pw, is_admin=True))
-        
-        # قائمة الأمراض الكاملة (بدون اختصارات)
-        protocols_data = [
-            {"n": "Adhesive Capsulitis", "k": "frozen shoulder, stiff", "d": "Stiffness and pain in the shoulder joint.", "et": "TENS", "ep": "100Hz, continuous", "er": "Pain relief", "ut": "Ultrasound", "up": "1.5 W/cm2, 1MHz", "ur": "Deep heating", "ex": "Pendulum, Wand exercises", "ex_r": "Increase ROM", "src": "Kisner & Colby", "img": "shoulder.jpg"},
-            {"n": "Knee Osteoarthritis", "k": "knee oa, pain, joint", "d": "Degenerative joint disease affecting the knee.", "et": "IFC", "ep": "Beat freq 80-150Hz", "er": "Pain modulation", "ut": "None", "up": "None", "ur": "None", "ex": "Quads setting, SLR", "ex_r": "Strengthening", "src": "Dutton", "img": "knee.jpg"},
-            {"n": "Low Back Pain (Mechanical)", "k": "lbp, back, lumbar", "d": "Pain in the lumbar region not due to radiculopathy.", "et": "TENS", "ep": "80-100Hz", "er": "Gate control", "ut": "IR Lamp", "up": "20 mins", "ur": "Relaxation", "ex": "McKenzie, Pelvic tilt", "ex_r": "Core stability", "src": "Magee", "img": "back.jpg"},
-            {"n": "Carpal Tunnel Syndrome", "k": "cts, wrist, hand", "d": "Median nerve compression at the wrist.", "et": "Ultrasound", "ep": "0.8 W/cm2, pulsed 20%", "er": "Anti-inflammatory", "ut": "US", "up": "See above", "ur": "Healing", "ex": "Tendon gliding", "ex_r": "Mobility", "src": "Brotzman", "img": "wrist.jpg"},
-            {"n": "Lateral Epicondylitis", "k": "tennis elbow", "d": "Inflammation of the extensor origin.", "et": "Laser", "ep": "4 J/cm2", "er": "Tissue repair", "ut": "Phonophoresis", "up": "1.0 W/cm2", "ur": "Drug delivery", "ex": "Eccentric wrist ext", "ex_r": "Remodeling", "src": "Kisner", "img": "elbow.jpg"},
-            {"n": "Stroke (Hemiplegia)", "k": "cva, neuro", "d": "Paralysis on one side of the body.", "et": "FES", "ep": "35Hz, 300us", "er": "Re-education", "ut": "None", "up": "None", "ur": "None", "ex": "Task-oriented training", "ex_r": "Neuroplasticity", "src": "Carr & Shepherd", "img": "stroke.jpg"},
-            {"n": "Bell's Palsy", "k": "facial, nerve", "d": "Facial nerve paralysis.", "et": "ESTR", "ep": "Interrupted DC", "er": "Muscle stimulation", "ut": "None", "up": "None", "ur": "None", "ex": "Facial expressions", "ex_r": "Function", "src": "Tidy's", "img": "face.jpg"},
-            {"n": "Cerebral Palsy (Spastic)", "k": "cp, child, peds", "d": "Motor disorder due to brain damage.", "et": "NMES", "ep": "Antagonist muscles", "er": "Reduce spasticity", "ut": "None", "up": "None", "ur": "None", "ex": "Stretching, NDT", "ex_r": "Function", "src": "Tecklin", "img": "cp.jpg"},
-            {"n": "Sciatica", "k": "nerve, leg pain", "d": "Pain radiating along the sciatic nerve.", "et": "TENS", "ep": "Burst mode", "er": "Endorphin release", "ut": "Hot Pack", "up": "20 mins", "ur": "Relaxation", "ex": "Nerve gliding", "ex_r": "Mobilization", "src": "Magee", "img": "sciatica.jpg"},
-            {"n": "Ankle Sprain", "k": "ankle, ligament", "d": "Ligament injury in the ankle.", "et": "Cryotherapy", "ep": "Ice 15 mins", "er": "Vasoconstriction", "ut": "US", "up": "Pulsed 20%", "ur": "Healing (Subacute)", "ex": "Proprioception", "ex_r": "Balance", "src": "Brotzman", "img": "ankle.jpg"},
-            {"n": "Plantar Fasciitis", "k": "foot, heel", "d": "Inflammation of the plantar fascia.", "et": "Ultrasound", "ep": "1.5 W/cm2 continuous", "er": "Extensibility", "ut": "Shockwave", "up": "2000 shocks", "ur": "Break adhesions", "ex": "Calf stretching", "ex_r": "Flexibility", "src": "Dutton", "img": "foot.jpg"},
-            {"n": "Neck Pain (Cervical Spondylosis)", "k": "neck, cervical", "d": "Degeneration of cervical spine.", "et": "IFT", "ep": "4000Hz base", "er": "Pain relief", "ut": "Hot Pack", "up": "15 mins", "ur": "Relaxation", "ex": "Chin tucks", "ex_r": "Posture", "src": "Maitland", "img": "neck.jpg"},
-            {"n": "Rotator Cuff Tendinitis", "k": "shoulder, cuff", "d": "Inflammation of shoulder tendons.", "et": "US", "ep": "1MHz, pulsed", "er": "Healing", "ut": "Laser", "up": "Low level", "ur": "Repair", "ex": "Isometrics", "ex_r": "Strength", "src": "Kisner", "img": "shoulder_cuff.jpg"},
-            {"n": "Patellofemoral Pain Syndrome", "k": "knee, runner", "d": "Pain around the kneecap.", "et": "Biofeedback", "ep": "VMO muscle", "er": "Re-education", "ut": "Ice", "up": "10 mins", "ur": "Pain", "ex": "VMO strengthening", "ex_r": "Tracking", "src": "Brotzman", "img": "knee_vmo.jpg"},
-            {"n": "Guillain-Barre Syndrome", "k": "gbs, neuro", "d": "Rapid-onset muscle weakness.", "et": "None", "ep": "Avoid fatigue", "er": "None", "ut": "None", "up": "None", "ur": "None", "ex": "PROM -> AAROM", "ex_r": "Maintain range", "src": "O'Sullivan", "img": "gbs.jpg"},
-            {"n": "Multiple Sclerosis", "k": "ms, neuro", "d": "Demyelinating disease.", "et": "Cooling vest", "ep": "Minimize heat", "er": "Performance", "ut": "None", "up": "None", "ur": "None", "ex": "Energy conservation", "ex_r": "Endurance", "src": "O'Sullivan", "img": "ms.jpg"},
-            {"n": "Rheumatoid Arthritis", "k": "ra, hand, joint", "d": "Autoimmune joint inflammation.", "et": "Paraffin Wax", "ep": "Dip method", "er": "Pain/Stiffness", "ut": "TENS", "up": "Conv. mode", "ur": "Pain", "ex": "Gentle AROM", "ex_r": "Mobility", "src": "Tidy's", "img": "hand_ra.jpg"},
-            {"n": "Scoliosis", "k": "spine, curve", "d": "Sideways curvature of the spine.", "et": "NMES", "ep": "Convex side", "er": "Muscle balance", "ut": "None", "up": "None", "ur": "None", "ex": "Schroth method", "ex_r": "Correction", "src": "Kisner", "img": "spine.jpg"},
-            {"n": "Achilles Tendinitis", "k": "heel, tendon", "d": "Overuse of the Achilles tendon.", "et": "US", "ep": "3MHz pulsed", "er": "Healing", "ut": "Eccentric load", "up": "Slow drop", "ur": "Remodeling", "ex": "Heel drops", "ex_r": "Strength", "src": "Brotzman", "img": "heel.jpg"},
-            {"n": "Fibromyalgia", "k": "fibro, pain", "d": "Widespread musculoskeletal pain.", "et": "TENS", "ep": "Burst/Acupuncture", "er": "Central pain", "ut": "Heat", "up": "General", "ur": "Relaxation", "ex": "Aerobic (Low impact)", "ex_r": "Endurance", "src": "Dutton", "img": "body.jpg"}
-        ]
-
-        for p in protocols_data:
-            new_p = Protocol(
-                disease_name=p["n"], keywords=p["k"], description=p["d"],
-                estim_type=p["et"], estim_params=p["ep"], estim_role=p["er"],
-                us_type=p["ut"], us_params=p["up"], us_role=p["ur"],
-                exercises_list=p["ex"], exercises_role=p["ex_r"],
-                source_ref=p["src"], electrode_image=p["img"]
-            )
-            db.session.add(new_p)
-        
-        db.session.commit()
-        return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
-    except Exception as e: return f"Error: {str(e)}"
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
-
-
-
