@@ -205,7 +205,7 @@ def register():
 def logout(): logout_user(); return redirect(url_for('login'))
 
 # --- التثبيت (الكامل مع البيانات) ---
-@app.route('/setup-system')
+@app.route('/setup-sys-secure-hmna12-4-2026')
 def setup_system():
     try:
         # مسح القديم وإنشاء الجديد
@@ -259,5 +259,6 @@ def setup_system():
 if __name__ == '__main__':
     with app.app_context(): db.create_all()
    app.run(debug=False)
+
 
 
