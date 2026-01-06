@@ -258,13 +258,14 @@ def home():
         search_query = request.form.get('disease')
         if search_query:
             term = f"%{search_query}%"
-            # بحث ذكي يشمل الاسم والكلمات الدلالية
+            # تم تعديل all() إلى first() ليتوافق مع صفحة العرض
             result = Protocol.query.filter(
                 (Protocol.disease_name.ilike(term)) | 
                 (Protocol.keywords.ilike(term))
-            ).all() # استخدام all لجلب كل النتائج المحتملة
+            ).first() 
     
-    return render_template('index.html', results=result, user=current_user)
+    # تم تعديل results إلى result (مفرد)
+    return render_template('index.html', result=result, user=current_user)
 
 @app.route('/admin')
 @admin_required
