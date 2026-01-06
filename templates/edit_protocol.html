@@ -1,30 +1,103 @@
-# --- تعديل بروتوكول (مع تحديث الصورة) ---
-@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
-@admin_required
-def edit_protocol(id):
-    p = Protocol.query.get_or_404(id)
-    if request.method == 'POST':
-        p.disease_name = request.form['disease_name']
-        p.keywords = request.form['keywords']
-        p.description = request.form['description']
-        p.estim_type = request.form['estim_type']
-        p.estim_params = request.form['estim_params']
-        p.estim_role = request.form['estim_role']
-        p.us_type = request.form['us_type']
-        p.us_params = request.form['us_params']
-        p.us_role = request.form['us_role']
-        p.exercises_list = request.form['exercises_list']
-        p.exercises_role = request.form['exercises_role']
-        p.source_ref = request.form['source_ref']
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Protocol - Physio Expert</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .form-label { font-weight: bold; color: #1e3c72; }
+        .current-img { max-height: 150px; border-radius: 10px; border: 2px solid #ddd; margin-bottom: 15px; }
+    </style>
+</head>
+<body class="py-5">
 
-        # تحديث الصورة فقط لو الأدمن رفع صورة جديدة
-        if 'electrode_image' in request.files:
-            file = request.files['electrode_image']
-            if file.filename != '':
-                encoded_string = base64.b64encode(file.read()).decode('utf-8')
-                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-primary fw-bold">Edit: {{ protocol.disease_name }}</h2>
+                    <a href="/admin" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                </div>
 
-        db.session.commit()
-        flash('Protocol Updated!', 'success')
-        return redirect(url_for('admin_dashboard'))
-    return render_template('edit_protocol.html', protocol=p)
+                <form action="/admin/edit/{{ protocol.id }}" method="POST" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Disease Name</label>
+                            <input type="text" name="disease_name" class="form-control" value="{{ protocol.disease_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Keywords</label>
+                            <input type="text" name="keywords" class="form-control" value="{{ protocol.keywords }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3">{{ protocol.description }}</textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Electro Type</label>
+                            <input type="text" name="estim_type" class="form-control" value="{{ protocol.estim_type }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Electro Params</label>
+                            <input type="text" name="estim_params" class="form-control" value="{{ protocol.estim_params }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Electro Role</label>
+                            <input type="text" name="estim_role" class="form-control" value="{{ protocol.estim_role }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">US Type</label>
+                            <input type="text" name="us_type" class="form-control" value="{{ protocol.us_type }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">US Params</label>
+                            <input type="text" name="us_params" class="form-control" value="{{ protocol.us_params }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">US Role</label>
+                            <input type="text" name="us_role" class="form-control" value="{{ protocol.us_role }}">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Exercises List</label>
+                            <input type="text" name="exercises_list" class="form-control" value="{{ protocol.exercises_list }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Exercises Role</label>
+                            <input type="text" name="exercises_role" class="form-control" value="{{ protocol.exercises_role }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Scientific Reference</label>
+                            <input type="text" name="source_ref" class="form-control" value="{{ protocol.source_ref }}">
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <div class="p-3 bg-light rounded border">
+                                <label class="form-label text-danger d-block">Update Electrode Image</label>
+                                {% if protocol.electrode_image %}
+                                    <img src="{{ protocol.electrode_image }}" class="current-img d-block">
+                                {% endif %}
+                                <input type="file" name="electrode_image" class="form-control" accept="image/*">
+                                <small class="text-muted">Leaving this empty will keep the current image.</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-center mt-5">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow">Save Changes</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
