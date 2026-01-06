@@ -1,64 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Protocol</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+# --- تعديل بروتوكول (مع تحديث الصورة) ---
+@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_protocol(id):
+    p = Protocol.query.get_or_404(id)
+    if request.method == 'POST':
+        p.disease_name = request.form['disease_name']
+        p.keywords = request.form['keywords']
+        p.description = request.form['description']
+        p.estim_type = request.form['estim_type']
+        p.estim_params = request.form['estim_params']
+        p.estim_role = request.form['estim_role']
+        p.us_type = request.form['us_type']
+        p.us_params = request.form['us_params']
+        p.us_role = request.form['us_role']
+        p.exercises_list = request.form['exercises_list']
+        p.exercises_role = request.form['exercises_role']
+        p.source_ref = request.form['source_ref']
 
-<div class="container mt-5 mb-5">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h3>Edit Protocol: {{ protocol.disease_name }}</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Disease Name</label>
-                    <input type="text" name="disease_name" class="form-control" value="{{ protocol.disease_name }}" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Keywords</label>
-                    <input type="text" name="keywords" class="form-control" value="{{ protocol.keywords }}">
-                </div>
+        # تحديث الصورة فقط لو الأدمن رفع صورة جديدة
+        if 'electrode_image' in request.files:
+            file = request.files['electrode_image']
+            if file.filename != '':
+                encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
 
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="2">{{ protocol.description }}</textarea>
-                </div>
-
-                <hr>
-                <h5>Electrotherapy</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><label class="form-label small text-muted">Type</label><input type="text" name="estim_type" class="form-control" value="{{ protocol.estim_type }}"></div>
-                    <div class="col-md-4"><label class="form-label small text-muted">Params</label><input type="text" name="estim_params" class="form-control" value="{{ protocol.estim_params }}"></div>
-                    <div class="col-md-4"><label class="form-label small text-muted">Role</label><input type="text" name="estim_role" class="form-control" value="{{ protocol.estim_role }}"></div>
-                </div>
-
-                <hr>
-                <h5>Ultrasound</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><label class="form-label small text-muted">Type</label><input type="text" name="us_type" class="form-control" value="{{ protocol.us_type }}"></div>
-                    <div class="col-md-4"><label class="form-label small text-muted">Params</label><input type="text" name="us_params" class="form-control" value="{{ protocol.us_params }}"></div>
-                    <div class="col-md-4"><label class="form-label small text-muted">Role</label><input type="text" name="us_role" class="form-control" value="{{ protocol.us_role }}"></div>
-                </div>
-
-                <hr>
-                <h5>Exercises & Info</h5>
-                <div class="mb-2"><label class="form-label small text-muted">List</label><input type="text" name="exercises_list" class="form-control" value="{{ protocol.exercises_list }}"></div>
-                <div class="mb-2"><label class="form-label small text-muted">Role</label><input type="text" name="exercises_role" class="form-control" value="{{ protocol.exercises_role }}"></div>
-                <div class="mb-2"><label class="form-label small text-muted">Ref</label><input type="text" name="source_ref" class="form-control" value="{{ protocol.source_ref }}"></div>
-                <div class="mb-2"><label class="form-label small text-muted">Image</label><input type="text" name="electrode_image" class="form-control" value="{{ protocol.electrode_image }}"></div>
-
-                <button type="submit" class="btn btn-primary mt-3 w-100">Update Protocol</button>
-            </form>
-            <a href="/admin" class="btn btn-secondary mt-2 w-100">Cancel</a>
-        </div>
-    </div>
-</div>
-
-</body>
-</html>
+        db.session.commit()
+        flash('Protocol Updated!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('edit_protocol.html', protocol=p)
