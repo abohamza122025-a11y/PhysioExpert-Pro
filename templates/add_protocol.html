@@ -1,64 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Protocol</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+# --- إضافة بروتوكول جديد (مع رفع الصورة) ---
+@app.route('/admin/add', methods=['GET', 'POST'])
+@admin_required
+def add_protocol():
+    if request.method == 'POST':
+        # معالجة الصورة
+        image_data = ""
+        if 'electrode_image' in request.files:
+            file = request.files['electrode_image']
+            if file.filename != '':
+                # تحويل الصورة إلى نص وتخزينها
+                encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                image_data = f"data:image/jpeg;base64,{encoded_string}"
 
-<div class="container mt-5 mb-5">
-    <div class="card shadow">
-        <div class="card-header bg-success text-white">
-            <h3>Add New Protocol</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Disease Name (Required)</label>
-                    <input type="text" name="disease_name" class="form-control" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Keywords (Comma separated)</label>
-                    <input type="text" name="keywords" class="form-control" placeholder="e.g. knee, pain, acl">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="2"></textarea>
-                </div>
-
-                <hr>
-                <h5>Electrotherapy</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><input type="text" name="estim_type" class="form-control" placeholder="Type (e.g. TENS)"></div>
-                    <div class="col-md-4"><input type="text" name="estim_params" class="form-control" placeholder="Parameters"></div>
-                    <div class="col-md-4"><input type="text" name="estim_role" class="form-control" placeholder="Role"></div>
-                </div>
-
-                <hr>
-                <h5>Ultrasound</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><input type="text" name="us_type" class="form-control" placeholder="Type"></div>
-                    <div class="col-md-4"><input type="text" name="us_params" class="form-control" placeholder="Parameters"></div>
-                    <div class="col-md-4"><input type="text" name="us_role" class="form-control" placeholder="Role"></div>
-                </div>
-
-                <hr>
-                <h5>Exercises & Info</h5>
-                <div class="mb-2"><input type="text" name="exercises_list" class="form-control" placeholder="Exercises List"></div>
-                <div class="mb-2"><input type="text" name="exercises_role" class="form-control" placeholder="Exercises Role/Goal"></div>
-                <div class="mb-2"><input type="text" name="source_ref" class="form-control" placeholder="Source Reference"></div>
-                <div class="mb-2"><input type="text" name="electrode_image" class="form-control" placeholder="Image Filename (e.g. knee.jpg)"></div>
-
-                <button type="submit" class="btn btn-success mt-3 w-100">Save Protocol</button>
-            </form>
-            <a href="/admin" class="btn btn-secondary mt-2 w-100">Cancel</a>
-        </div>
-    </div>
-</div>
-
-</body>
-</html>
+        p = Protocol(
+            disease_name=request.form['disease_name'],
+            keywords=request.form['keywords'],
+            description=request.form['description'],
+            estim_type=request.form['estim_type'],
+            estim_params=request.form['estim_params'],
+            estim_role=request.form['estim_role'],
+            us_type=request.form['us_type'],
+            us_params=request.form['us_params'],
+            us_role=request.form['us_role'],
+            exercises_list=request.form['exercises_list'],
+            exercises_role=request.form['exercises_role'],
+            source_ref=request.form['source_ref'],
+            electrode_image=image_data # هنا بنحط كود الصورة
+        )
+        db.session.add(p)
+        db.session.commit()
+        flash('Protocol & Image Added Successfully!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('add_protocol.html')
