@@ -1,68 +1,239 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Protocol</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+import os
+import base64
+from functools import wraps
+from datetime import datetime, timedelta
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
-<div class="container mt-5 mb-5">
-    <div class="card shadow">
-        <div class="card-header bg-success text-white">
-            <h3>Add New Protocol</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label">Disease Name (Required)</label>
-                    <input type="text" name="disease_name" class="form-control" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Keywords (Comma separated)</label>
-                    <input type="text" name="keywords" class="form-control" placeholder="e.g. knee, pain, acl">
-                </div>
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_final_2026')
 
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="2"></textarea>
-                </div>
+# --- 1. إعدادات قاعدة البيانات ---
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-                <hr>
-                <h5>Electrotherapy</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><input type="text" name="estim_type" class="form-control" placeholder="Type (e.g. TENS)"></div>
-                    <div class="col-md-4"><input type="text" name="estim_params" class="form-control" placeholder="Parameters"></div>
-                    <div class="col-md-4"><input type="text" name="estim_role" class="form-control" placeholder="Role"></div>
-                </div>
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-                <hr>
-                <h5>Ultrasound</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4"><input type="text" name="us_type" class="form-control" placeholder="Type"></div>
-                    <div class="col-md-4"><input type="text" name="us_params" class="form-control" placeholder="Parameters"></div>
-                    <div class="col-md-4"><input type="text" name="us_role" class="form-control" placeholder="Role"></div>
-                </div>
+db = SQLAlchemy(app)
+login_manager = LoginManager(); login_manager.init_app(app); login_manager.login_view = 'login'
 
-                <hr>
-                <h5>Exercises & Info</h5>
-                <div class="mb-2"><input type="text" name="exercises_list" class="form-control" placeholder="Exercises List"></div>
-                <div class="mb-2"><input type="text" name="exercises_role" class="form-control" placeholder="Exercises Role/Goal"></div>
-                <div class="mb-2"><input type="text" name="source_ref" class="form-control" placeholder="Source Reference"></div>
-                
-                <div class="mb-3 border p-3 bg-white rounded">
-                    <label class="form-label fw-bold text-primary">Upload Electrode Placement Image</label>
-                    <input type="file" name="electrode_image" class="form-control" accept="image/*">
-                </div>
+# --- بيانات الموقع الثابتة ---
+@app.context_processor
+def inject_global_vars():
+    return dict(
+        support_email="physioexpert8@gmail.com",
+        disclaimer="Disclaimer: This tool is for educational purposes only. Always consult a qualified specialist before applying treatments."
+    )
 
-                <button type="submit" class="btn btn-success mt-3 w-100">Save Protocol</button>
-            </form>
-            <a href="/admin" class="btn btn-secondary mt-2 w-100">Cancel</a>
-        </div>
-    </div>
-</div>
+# --- 2. الجداول (Models) ---
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    subscription_end = db.Column(db.DateTime, nullable=True)
 
-</body>
-</html>
+class Protocol(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    disease_name = db.Column(db.String(200), nullable=False)
+    keywords = db.Column(db.String(500))
+    description = db.Column(db.Text)
+    estim_type = db.Column(db.String(200))
+    estim_params = db.Column(db.Text)
+    estim_role = db.Column(db.Text)
+    us_type = db.Column(db.String(200))
+    us_params = db.Column(db.Text)
+    us_role = db.Column(db.Text)
+    exercises_list = db.Column(db.Text)
+    exercises_role = db.Column(db.Text)
+    source_ref = db.Column(db.String(300))
+    electrode_image = db.Column(db.Text)  # نوع Text لاستيعاب الصور المشفرة
+
+@login_manager.user_loader
+def load_user(user_id): return User.query.get(int(user_id))
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Admin access required', 'danger')
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- 3. المسارات (Routes) ---
+
+@app.route('/', methods=['GET', 'POST'])
+@login_required
+def home():
+    # التحقق من الاشتراك
+    if not current_user.is_admin:
+        days_passed = (datetime.utcnow() - current_user.created_at).days
+        days_left = 30 - days_passed
+        has_extended_sub = current_user.subscription_end and current_user.subscription_end > datetime.utcnow()
+        if days_left <= 0 and not has_extended_sub:
+            return redirect(url_for('subscription_expired'))
+    else:
+        days_left = "Unlimited (Admin)"
+
+    # البحث
+    result = None
+    search_query = request.args.get('disease') or request.form.get('disease')
+    if search_query:
+        term = f"%{search_query}%"
+        result = Protocol.query.filter(
+            (Protocol.disease_name.ilike(term)) | 
+            (Protocol.keywords.ilike(term))
+        ).first()
+    
+    return render_template('index.html', result=result, user=current_user, days_left=days_left)
+
+@app.route('/subscription')
+def subscription_expired():
+    # يمكن إنشاء ملف subscribe.html أو استخدام كود مباشر هنا
+    return render_template('subscribe.html') 
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    protocols = Protocol.query.all()
+    return render_template('admin.html', protocols=protocols)
+
+# --- إضافة بروتوكول (يدعم الصور) ---
+@app.route('/admin/add', methods=['GET', 'POST'])
+@admin_required
+def add_protocol():
+    if request.method == 'POST':
+        image_data = ""
+        # 1. فحص هل تم رفع ملف؟
+        if 'electrode_image' in request.files:
+            file = request.files['electrode_image']
+            if file.filename != '':
+                # 2. تحويل الصورة لكود Base64
+                encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                image_data = f"data:image/jpeg;base64,{encoded_string}"
+        
+        p = Protocol(
+            disease_name=request.form['disease_name'],
+            keywords=request.form['keywords'],
+            description=request.form['description'],
+            estim_type=request.form['estim_type'],
+            estim_params=request.form['estim_params'],
+            estim_role=request.form['estim_role'],
+            us_type=request.form['us_type'],
+            us_params=request.form['us_params'],
+            us_role=request.form['us_role'],
+            exercises_list=request.form['exercises_list'],
+            exercises_role=request.form['exercises_role'],
+            source_ref=request.form['source_ref'],
+            electrode_image=image_data # حفظ الكود (أو يترك فارغاً)
+        )
+        db.session.add(p)
+        db.session.commit()
+        flash('Protocol Added Successfully!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('add_protocol.html')
+
+# --- تعديل بروتوكول (يدعم الصور) ---
+@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_protocol(id):
+    p = Protocol.query.get_or_404(id)
+    if request.method == 'POST':
+        p.disease_name = request.form['disease_name']
+        p.keywords = request.form['keywords']
+        p.description = request.form['description']
+        p.estim_type = request.form['estim_type']
+        p.estim_params = request.form['estim_params']
+        p.estim_role = request.form['estim_role']
+        p.us_type = request.form['us_type']
+        p.us_params = request.form['us_params']
+        p.us_role = request.form['us_role']
+        p.exercises_list = request.form['exercises_list']
+        p.exercises_role = request.form['exercises_role']
+        p.source_ref = request.form['source_ref']
+        
+        # تحديث الصورة فقط لو الأدمن رفع ملف جديد
+        if 'electrode_image' in request.files:
+            file = request.files['electrode_image']
+            if file.filename != '':
+                encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
+        
+        db.session.commit()
+        flash('Protocol Updated!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('edit_protocol.html', protocol=p)
+
+@app.route('/admin/delete/<int:id>')
+@admin_required
+def delete_protocol(id):
+    p = Protocol.query.get_or_404(id)
+    db.session.delete(p)
+    db.session.commit()
+    flash('Protocol Deleted', 'warning')
+    return redirect(url_for('admin_dashboard'))
+
+# --- تسجيل الدخول والنسيان ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user = User.query.filter_by(email=request.form['email']).first()
+        if user and check_password_hash(user.password, request.form['password']):
+            login_user(user)
+            return redirect(url_for('home'))
+        else:
+            flash('Login Failed. Check email/password', 'danger')
+    return render_template('login.html')
+
+@app.route('/forgot-password')
+def forgot_password():
+    return render_template('forgot_password.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        try:
+            pw = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
+            db.session.add(User(email=request.form['email'], password=pw))
+            db.session.commit()
+            return redirect(url_for('login'))
+        except: flash('Email already exists', 'danger')
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout(): logout_user(); return redirect(url_for('login'))
+
+# --- التثبيت (Setup) ---
+def get_full_medical_data():
+    # هنا الـ 20 مرض الأصليين (تم اختصارها هنا، لكن تأكد من وجودها في الكود عندك)
+    # الصور هنا نضع أسماءها النصية فقط (مثل knee.jpg) والكود في index.html سيعالجها
+    return [
+        {"n": "Adhesive Capsulitis", "k": "frozen shoulder", "d": "Stiffness/Pain", "et": "TENS", "ep": "100Hz", "er": "Pain", "ut": "US", "up": "1MHz", "ur": "Heat", "ex": "Pendulum", "ex_r": "ROM", "src": "Kisner", "img": "shoulder.jpg"},
+        # ... (باقي الأمراض كما هي)
+    ]
+
+@app.route('/setup-system')
+def setup_system():
+    try:
+        db.drop_all(); db.create_all()
+        admin_email = "admin@physio.com"; admin_pass = "admin123"
+        hashed_pw = generate_password_hash(admin_pass, method='pbkdf2:sha256')
+        db.session.add(User(email=admin_email, password=hashed_pw, is_admin=True))
+        
+        # إضافة البيانات الافتراضية
+        # (يمكنك نسخ قائمة البيانات كاملة من الكود السابق هنا)
+        
+        db.session.commit()
+        return "<h1>✅ System Ready!</h1><a href='/login'>Login</a>"
+    except Exception as e: return f"Error: {str(e)}"
+
+if __name__ == '__main__':
+    with app.app_context(): db.create_all()
+    app.run(debug=True)
