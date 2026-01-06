@@ -121,18 +121,28 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body text-center">
+                            <h6 class="text-primary mb-3">Electrode Placement</h6>
+                            
                             {% if result.electrode_image %}
-                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height:150px; border-radius:10px;">
-                                    Reference Image: {{ result.electrode_image }}
-                                    <br>(Upload Pending)
+                                {% if 'data:image' in result.electrode_image %}
+                                    <img src="{{ result.electrode_image }}" class="img-fluid rounded border shadow-sm" alt="Electrode Placement" style="max-height: 200px;">
+                                {% else %}
+                                    <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="height:150px;">
+                                        <span class="text-muted">{{ result.electrode_image }}</span>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="height:150px;">
+                                    <span class="text-muted">No Image Available</span>
                                 </div>
                             {% endif %}
+                            
                             <hr>
                             <p class="small text-muted"><strong>Source:</strong> {{ result.source_ref }}</p>
                         </div>
                     </div>
                 </div>
-            </div>
+                </div>
         </div>
     </div>
     {% elif request.method == 'POST' %}
