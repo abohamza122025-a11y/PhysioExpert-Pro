@@ -30,10 +30,23 @@
                             <label class="form-label">Disease Name</label>
                             <input type="text" name="disease_name" class="form-control" value="{{ protocol.disease_name }}" required>
                         </div>
+                        
                         <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="Orthopedics" {% if protocol.category == 'Orthopedics' %}selected{% endif %}>Orthopedics</option>
+                                <option value="Neurology" {% if protocol.category == 'Neurology' %}selected{% endif %}>Neurology</option>
+                                <option value="Pediatrics" {% if protocol.category == 'Pediatrics' %}selected{% endif %}>Pediatrics</option>
+                                <option value="Sports Medicine" {% if protocol.category == 'Sports Medicine' %}selected{% endif %}>Sports Medicine</option>
+                                <option value="General" {% if protocol.category == 'General' %}selected{% endif %}>General</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12">
                             <label class="form-label">Keywords</label>
                             <input type="text" name="keywords" class="form-control" value="{{ protocol.keywords }}">
                         </div>
+                        
                         <div class="col-12">
                             <label class="form-label">Description</label>
                             <textarea name="description" class="form-control" rows="3">{{ protocol.description }}</textarea>
