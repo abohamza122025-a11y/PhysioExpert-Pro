@@ -163,27 +163,32 @@ def add_manual():
 def edit_protocol(id):
     p = Protocol.query.get_or_404(id)
     if request.method == 'POST':
-        p.disease_name = request.form['disease_name']
+        # استخدام .get يتجنب خطأ 400 تماماً
+        p.disease_name = request.form.get('disease_name')
         p.category = request.form.get('category')
-        p.description = request.form['description']
-        p.estim_params = request.form['estim_params']
-        p.us_params = request.form['us_params']
-        p.exercises_list = request.form['exercises_list']
-        p.ex_frequency = request.form['ex_frequency']
-        p.source_ref = request.form['source_ref']
-        
+        p.description = request.form.get('description')
+        p.keywords = request.form.get('keywords')
+        p.estim_type = request.form.get('estim_type')
+        p.estim_params = request.form.get('estim_params')
+        p.estim_role = request.form.get('estim_role')
+        p.us_type = request.form.get('us_type')
+        p.us_params = request.form.get('us_params')
+        p.us_role = request.form.get('us_role')
+        p.exercises_list = request.form.get('exercises_list')
+        p.exercises_role = request.form.get('exercises_role')
+        p.ex_frequency = request.form.get('ex_frequency')
+        p.source_ref = request.form.get('source_ref')
+
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
-            if file.filename != '':
-                # استخدمنا Base64 هنا لضمان ثبات الصور كما اتفقنا
+            if file and file.filename != '':
                 encoded_string = base64.b64encode(file.read()).decode('utf-8')
                 p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
-        
+
         db.session.commit()
-        flash(f'Protocol {p.disease_name} Updated!', 'success')
+        flash('Protocol Updated Successfully!', 'success')
         return redirect(url_for('admin_dashboard'))
     
-    # تأكد أن هذا السطر مزاح للداخل (Tab) مرة واحدة ليكون تابعاً للدالة
     return render_template('edit_protocol.html', protocol=p)
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
@@ -193,25 +198,44 @@ def import_excel():
         return redirect(url_for('admin_dashboard'))
     
     file = request.files['excel_file']
+    if file.filename == '':
+        flash('No selected file', 'warning')
+        return redirect(url_for('admin_dashboard'))
+
     try:
         df = pd.read_excel(file)
+        # تنظيف أسماء الأعمدة من أي مسافات زائدة
+        df.columns = df.columns.str.strip()
+        
         for _, row in df.iterrows():
+            # استخدام .get هنا يمنع الخطأ تماماً لو العمود مش موجود في الإكسيل
             new_p = Protocol(
-                disease_name=str(row['disease_name']),
+                disease_name=str(row.get('disease_name', 'Unknown Condition')),
                 category=str(row.get('category', 'General')),
                 keywords=str(row.get('keywords', '')),
                 description=str(row.get('description', '')),
-                exercises_list=str(row['exercises_list']),
+                estim_type=str(row.get('estim_type', '')),
+                estim_params=str(row.get('estim_params', '')),
+                estim_role=str(row.get('estim_role', '')),
+                us_type=str(row.get('us_type', '')),
+                us_params=str(row.get('us_params', '')),
+                us_role=str(row.get('us_role', '')),
+                exercises_list=str(row.get('exercises_list', '')),
+                exercises_role=str(row.get('exercises_role', '')),
                 ex_frequency=str(row.get('ex_frequency', '3 times/week')),
                 ex_intensity=str(row.get('ex_intensity', 'Moderate')),
                 evidence_level=str(row.get('evidence_level', 'Grade A')),
-                is_protected=False
+                source_ref=str(row.get('source_ref', 'N/A'))
+                # حذفنا is_protected لأنه غير موجود في الـ Model الخاص بك
             )
             db.session.add(new_p)
+            
         db.session.commit()
         flash(f'Successfully imported {len(df)} protocols!', 'success')
     except Exception as e:
-        flash(f'Error: {str(e)}', 'danger')
+        db.session.rollback()
+        flash(f'Excel Error: {str(e)}', 'danger')
+        
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete/<int:id>')
@@ -322,6 +346,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
