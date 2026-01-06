@@ -17,7 +17,14 @@
     </style>
 </head>
 <body>
-
+<div class="card mt-4 p-4 shadow-sm">
+    <h3 class="text-primary"><i class="fas fa-file-excel"></i> Bulk Import via Excel</h3>
+    <p class="text-muted">ارفع ملف الـ 50 حالة الذي أنشأناه الآن</p>
+    <form action="/admin/import" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" class="form-control mb-3" accept=".xlsx" required>
+        <button type="submit" class="btn btn-success w-100">Upload Excel & Update Database</button>
+    </form>
+</div>
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-2 admin-sidebar d-none d-md-block">
