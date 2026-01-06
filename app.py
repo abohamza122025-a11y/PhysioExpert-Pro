@@ -157,7 +157,34 @@ def add_manual():
     db.session.commit()
     flash('Manual Protocol Added Successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
-
+# --- مسار تعديل بروتوكول موجود ---
+@app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_protocol(id):
+    p = Protocol.query.get_or_404(id)
+    if request.method == 'POST':
+        p.disease_name = request.form['disease_name']
+        p.category = request.form.get('category')
+        p.description = request.form['description']
+        p.estim_params = request.form['estim_params']
+        p.us_params = request.form['us_params']
+        p.exercises_list = request.form['exercises_list']
+        p.ex_frequency = request.form['ex_frequency']
+        p.source_ref = request.form['source_ref']
+        
+        # إذا رفعت صورة جديدة أثناء التعديل
+        if 'electrode_image' in request.files:
+            file = request.files['electrode_image']
+            if file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                p.electrode_image = f"/static/uploads/{filename}"
+        
+        db.session.commit()
+        flash(f'Protocol {p.disease_name} Updated!', 'success')
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('edit_protocol.html', p=p)
 # --- رفع بروتوكولات بالجملة عبر الإكسيل ---
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
@@ -296,3 +323,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
