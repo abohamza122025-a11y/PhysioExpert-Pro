@@ -124,14 +124,14 @@ def admin_dashboard():
 @app.route('/admin/add-manual', methods=['POST'])
 @admin_required
 def add_manual():
-    image_path = ""
-    # رفع الصورة وحفظها في مجلد uploads
+    image_data = ""
+    # رفع الصورة وتحويلها لتشفير Base64 لضمان عدم ضياعها
     if 'electrode_image' in request.files:
         file = request.files['electrode_image']
         if file.filename != '':
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_path = f"/static/uploads/{filename}"
+            # قراءة ملف الصورة وتحويله لنص مشفر
+            encoded_string = base64.b64encode(file.read()).decode('utf-8')
+            image_data = f"data:image/jpeg;base64,{encoded_string}"
         
     p = Protocol(
         disease_name=request.form['disease_name'],
@@ -151,11 +151,11 @@ def add_manual():
         ex_progression=request.form.get('ex_progression'),
         evidence_level=request.form.get('evidence_level', 'Grade A'),
         source_ref=request.form['source_ref'],
-        electrode_image=image_path
+        electrode_image=image_data  # تخزين النص المشفر في قاعدة البيانات
     )
     db.session.add(p)
     db.session.commit()
-    flash('Manual Protocol Added Successfully!', 'success')
+    flash('Manual Protocol Added with Secure Image!', 'success')
     return redirect(url_for('admin_dashboard'))
 # --- مسار تعديل بروتوكول موجود ---
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
@@ -323,4 +323,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
