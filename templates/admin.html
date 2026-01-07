@@ -111,6 +111,11 @@
                                         <input type="text" name="exercises_role" class="form-control" placeholder="Strengthening/ROM">
                                     </div>
 
+                                    <div class="col-12">
+                                        <label class="form-label"><i class="fab fa-youtube text-danger me-2"></i> YouTube Video Link (Optional)</label>
+                                        <input type="text" name="video_link" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+                                    </div>
+
                                     <div class="col-12 bg-light p-3 rounded border">
                                         <label class="form-label fw-bold text-primary"><i class="fas fa-image me-2"></i> Electrode Placement Image</label>
                                         <input type="file" name="electrode_image" class="form-control" accept="image/*">
@@ -168,7 +173,7 @@
                                 <thead class="table-light text-center">
                                     <tr>
                                         <th class="text-start ps-4">Student Email</th>
-                                        <th>Security Action</th>
+                                        <th>Security & Permissions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -180,6 +185,12 @@
                                                     onclick="let p = prompt('Enter new password for: {{ u.email }}'); if(p) window.location.href='/admin/reset-user-password/{{ u.email }}/' + p;">
                                                 <i class="fas fa-key me-1"></i> Reset Password
                                             </button>
+
+                                            <a href="/admin/toggle-print/{{ u.id }}" 
+                                               class="btn btn-sm {{ 'btn-success' if u.can_print else 'btn-secondary' }} ms-2">
+                                                <i class="fas fa-print"></i> 
+                                                {{ 'Allowed' if u.can_print else 'Blocked' }}
+                                            </a>
                                         </td>
                                     </tr>
                                     {% endfor %}
