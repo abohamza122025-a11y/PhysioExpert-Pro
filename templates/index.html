@@ -76,7 +76,23 @@
             border-top: 1px solid #eee;
         }
     </style>
-</head>
+
+    <style>
+        /* هذا الجزء يخفي الأزرار والقوائم عند الطباعة لتخرج الورقة نظيفة */
+        @media print {
+            .no-print, .navbar, footer, .alert, .hero-section, form { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .container { margin-top: 0 !important; }
+        }
+
+        /* هذا الجزء يمنع الطباعة (تخرج ورقة بيضاء) إذا لم يكن لدى المستخدم إذن */
+        {% if not (current_user.can_print or current_user.is_admin) %}
+        @media print {
+            body { display: none !important; }
+        }
+        {% endif %}
+    </style>
+    </head>
 <body class="bg-light d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3">
   <div class="container">
@@ -157,7 +173,7 @@
                 .container { margin-top: 0 !important; width: 100% !important; max-width: 100% !important; }
                 .card-custom, .mint-table-container, .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
                 
-               
+                
                 body::before {
                     content: "Physio Expert Pro - Clinical Protocol";
                     display: block;
@@ -270,7 +286,10 @@
                             <h6 class="fw-bold text-primary"><i class="fas fa-bullseye me-2"></i> Exercise Goal:</h6>
                             <p class="mb-0">{{ result.exercises_role }}</p>
                         </div>
-                    </div> </div> </div> </div>
+                    </div> 
+                </div> 
+            </div> 
+</div>
 
         <div class="d-flex justify-content-center mt-2">
             <div class="bg-white px-4 py-2 rounded-pill border shadow-sm text-center">
@@ -279,7 +298,25 @@
             </div>
         </div>
 
-    </div>
+        <div class="text-center mt-4 no-print">
+            {% if current_user.is_authenticated and (current_user.can_print or current_user.is_admin) %}
+                
+                <button onclick="window.print()" class="btn btn-primary btn-lg shadow rounded-pill px-4">
+                    <i class="fas fa-print me-2"></i> Print Protocol
+                </button>
+
+            {% else %}
+                
+                <button class="btn btn-secondary rounded-pill px-4" disabled title="Printing is disabled for your account">
+                    <i class="fas fa-lock me-2"></i> Print Locked
+                </button>
+                {% if not current_user.is_authenticated %}
+                    <p class="small text-muted mt-2">Please <a href="/login">login</a> to print.</p>
+                {% endif %}
+
+            {% endif %}
+        </div>
+        </div>
     {% elif request.method == 'POST' %}
         <div class="text-center py-5">
             <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
@@ -298,12 +335,3 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
