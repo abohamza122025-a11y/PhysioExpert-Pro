@@ -71,7 +71,7 @@ class User(UserMixin, db.Model):
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(100), default="General") # أضفنا التصنيف
+    category = db.Column(db.String(100), default="General")
     disease_name = db.Column(db.String(200), nullable=False)
     keywords = db.Column(db.String(500))
     description = db.Column(db.Text)
@@ -83,15 +83,17 @@ class Protocol(db.Model):
     us_role = db.Column(db.Text)
     exercises_list = db.Column(db.Text)
     exercises_role = db.Column(db.Text)
-    ex_frequency = db.Column(db.String(200)) # حقول إضافية للجرعات والأنيميشن
+    ex_frequency = db.Column(db.String(200))
     ex_intensity = db.Column(db.String(200))
     ex_progression = db.Column(db.Text)
     evidence_level = db.Column(db.String(50), default="Grade A")
     source_ref = db.Column(db.String(300))
-    electrode_image = db.Column(db.Text)  # يدعم المسار أو التشفير
-contraindications = db.Column(db.Text) # موانع الاستخدام (مهم جداً اكلينيكياً)
+    electrode_image = db.Column(db.Text)
+    
+    # --- الحقول الجديدة (تم ضبط المسافات) ---
+    contraindications = db.Column(db.Text) # موانع الاستخدام
     red_flags = db.Column(db.Text)         # علامات الخطر
-    home_advice = db.Column(db.Text)       # نصائح للمريض
+    home_advice = db.Column(db.Text)       # نصائح منزلية
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
@@ -441,6 +443,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
