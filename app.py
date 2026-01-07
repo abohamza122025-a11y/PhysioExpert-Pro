@@ -4,6 +4,8 @@ import pandas as pd  # مكتبة معالجة الإكسيل
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import send_file
+from io import BytesIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -277,6 +279,42 @@ def edit_protocol(id):
         return redirect(url_for('admin_dashboard'))
     
     return render_template('edit_protocol.html', protocol=p)
+    @app.route('/admin/export-data')
+@admin_required
+def export_data():
+    # 1. تصدير البروتوكولات
+    protocols = Protocol.query.all()
+    p_data = [{
+        'disease_name': p.disease_name,
+        'category': p.category,
+        'description': p.description,
+        'estim_type': p.estim_type,
+        'exercises_list': p.exercises_list
+        # ... يمكنك إضافة باقي الحقول هنا
+    } for p in protocols]
+    
+    df_protocols = pd.DataFrame(p_data)
+    
+    # حفظ الملف في ذاكرة مؤقتة للتحميل
+    from io import BytesIO
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_protocols.to_excel(writer, sheet_name='Protocols', index=False)
+        
+        # 2. تصدير المستخدمين (اختياري)
+        users = User.query.all()
+        u_data = [{'email': u.email, 'is_admin': u.is_admin} for u in users]
+        df_users = pd.DataFrame(u_data)
+        df_users.to_excel(writer, sheet_name='Users', index=False)
+
+    output.seek(0)
+    
+    return send_file(
+        output, 
+        download_name=f'physio_backup_{datetime.now().strftime("%Y-%m-%d")}.xlsx',
+        as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
@@ -433,6 +471,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
