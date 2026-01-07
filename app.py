@@ -491,7 +491,6 @@ def setup_system():
 # --- استبدل دالة update_db_schema_safe القديمة بالكود ده ---
 @app.route('/update-db-schema-safe')
 # --- دالة التحديث الآمن (المصححة) ---
-@app.route('/update-db-schema-safe')
 # --- Safe Update Function (Clean Version) ---
 @app.route('/update-db-schema-safe')
 def update_db_schema_safe():
@@ -523,18 +522,8 @@ def update_db_schema_safe():
         
     except Exception as e:
         return f"<h1>Error: {str(e)}</h1>"
-        <h1 style='color:green; text-align:center; margin-top:50px;'>
-            ✅ تم تحديث قاعدة البيانات بنجاح!
-            <br>
-            <span style='font-size:20px; color:black;'>تمت إضافة الأعمدة الجديدة ولم يتم حذف أي بيانات.</span>
-        </h1>
-        <div style='text-align:center;'>
-            <a href='/'>العودة للصفحة الرئيسية</a>
-        </div>
-        """
-    except Exception as e:
-        return f"<h1>⚠️ Error: {str(e)}</h1>"
-        # --- مسار التحسين بالذكاء الاصطناعي (Magic Enhance) ---
+
+# --- مسار التحسين بالذكاء الاصطناعي (Magic Enhance) ---
 @app.route('/admin/enhance/<int:id>')
 @admin_required
 def enhance_protocol_route(id):
@@ -569,23 +558,18 @@ def enhance_protocol_route(id):
                 p.electrode_image = ai_data.get('electrode_image')
 
             db.session.commit()
-            flash(f'✨ Magic Enhance Successful for: {p.disease_name}', 'success')
+            flash(f'Magic Enhance Successful for: {p.disease_name}', 'success')
         except Exception as e:
             flash(f'Database Update Failed: {str(e)}', 'danger')
     else:
         flash('AI failed to generate enhanced data. Try again.', 'warning')
 
     return redirect(url_for('admin_dashboard'))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
-
-
-
-
-
-
 
 
 
