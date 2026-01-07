@@ -5,6 +5,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask import send_file
+from sqlalchemy import text
 from io import BytesIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -70,6 +71,7 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription_end = db.Column(db.DateTime, nullable=True)
+    can_print = db.Column(db.Boolean, default=False)
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -91,7 +93,7 @@ class Protocol(db.Model):
     evidence_level = db.Column(db.String(50), default="Grade A")
     source_ref = db.Column(db.String(300))
     electrode_image = db.Column(db.Text)  # يدعم المسار أو التشفير
-
+    video_link = db.Column(db.String(500), nullable=True)
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
@@ -156,6 +158,27 @@ def get_ai_protocol(disease_search):
 # ---------------------------------------------
 # --- 3. المسارات (Routes) ---
 
+@app.route('/admin/update-db-schema')
+@admin_required
+def update_db_schema():
+    try:
+        with db.engine.connect() as conn:
+            # أمر إضافة عمود boolean
+            conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+        return "<h1>✅ Permission Column Added!</h1>"
+    except Exception as e:
+        return f"<h1>Error: {str(e)}</h1>"
+@app.route('/admin/toggle-print/<int:user_id>')
+@admin_required
+def toggle_print(user_id):
+    user = User.query.get_or_404(user_id)
+    # عكس الحالة الحالية (لو شغال يوقفه، ولو واقف يشغله)
+    user.can_print = not user.can_print
+    db.session.commit()
+    status = "Enabled" if user.can_print else "Disabled"
+    flash(f'Printing permission {status} for {user.email}', 'info')
+    return redirect(url_for('admin_dashboard'))        
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
@@ -240,12 +263,14 @@ def add_manual():
         ex_progression=request.form.get('ex_progression'),
         evidence_level=request.form.get('evidence_level', 'Grade A'),
         source_ref=request.form['source_ref'],
+        video_link = request.form.get('video_link')
         electrode_image=image_data  # تخزين النص المشفر في قاعدة البيانات
     )
     db.session.add(p)
     db.session.commit()
     flash('Manual Protocol Added with Secure Image!', 'success')
     return redirect(url_for('admin_dashboard'))
+    
 # --- مسار تعديل بروتوكول موجود ---
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -267,6 +292,7 @@ def edit_protocol(id):
         p.exercises_role = request.form.get('exercises_role')
         p.ex_frequency = request.form.get('ex_frequency')
         p.source_ref = request.form.get('source_ref')
+        video_link = request.form.get('video_link')
 
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
@@ -279,7 +305,7 @@ def edit_protocol(id):
         return redirect(url_for('admin_dashboard'))
     
     return render_template('edit_protocol.html', protocol=p)
-    @app.route('/admin/export-data')
+@app.route('/admin/export-data')
 @admin_required
 def export_data():
     # 1. تصدير البروتوكولات
@@ -471,6 +497,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
