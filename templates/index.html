@@ -221,7 +221,6 @@
                         <small class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">Parameters</small>
                         <p class="mb-0 text-dark small">{{ result.estim_params }}</p>
                     </div>
-
                     <div class="text-center my-3 p-2 border rounded bg-white">
                          <h6 class="text-primary fw-bold mb-2" style="font-size: 0.8rem;">Electrode Placement Guide</h6>
                          {% if result.electrode_image %}
@@ -236,7 +235,6 @@
                              <span class="text-muted small">No Image Available</span>
                         {% endif %}
                     </div>
-
                     <p class="small text-muted mt-auto fst-italic border-top pt-2"><strong>Goal:</strong> {{ result.estim_role }}</p>
                 </div>
             </div>
@@ -261,7 +259,7 @@
                 </div>
             </div>
         </div>
-<div class="row mb-4">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card h-100 border-0 shadow-sm" style="background-color: #f0f8ff; border-radius: 15px;">
                     <div class="card-header text-white fw-bold py-3" style="border-radius: 15px 15px 0 0; background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
@@ -289,7 +287,18 @@
                     </div> 
                 </div> 
             </div> 
-</div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                 {% if result.notes %}
+                <div class="alert alert-warning shadow-sm border-start border-warning border-5" role="alert">
+                    <h5 class="alert-heading fw-bold"><i class="fas fa-sticky-note me-2"></i> Specialist Notes:</h5>
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ result.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
         <div class="d-flex justify-content-center mt-2">
             <div class="bg-white px-4 py-2 rounded-pill border shadow-sm text-center">
