@@ -26,10 +26,12 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 # ==========================================
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_final_2026')
+
 @app.template_filter('split_list')
 def split_list_filter(s):
     if not s: return []
     return [item.strip() for item in s.split(',')]
+
 # --- إعدادات مجلد رفع الصور ---
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -70,6 +72,7 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription_end = db.Column(db.DateTime, nullable=True)
     can_print = db.Column(db.Boolean, default=False) # هل مسموح له يطبع؟
+
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(100), default="General")
@@ -91,16 +94,15 @@ class Protocol(db.Model):
     source_ref = db.Column(db.String(300))
     electrode_image = db.Column(db.Text)
     # ... (باقي الحقول اللي فوق زي ما هي) ...
-    electrode_image = db.Column(db.Text)
+    # تم إزالة التكرار المتعارض والإبقاء على التعريف الصحيح
     
     # 👇👇 ضيف السطور دي هنا 👇👇
     contraindications = db.Column(db.Text) # موانع الاستخدام
     red_flags = db.Column(db.Text)         # علامات الخطر
     home_advice = db.Column(db.Text)       # نصائح منزلية
     # --- الحقول الجديدة (تم ضبط المسافات) ---
-    contraindications = db.Column(db.Text) # موانع الاستخدام
-    red_flags = db.Column(db.Text)         # علامات الخطر
-    home_advice = db.Column(db.Text)       # نصائح منزلية
+    # (تم دمجها أعلاه لضمان صحة الكلاس)
+
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
@@ -112,6 +114,7 @@ def admin_required(f):
             return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
+
 # --- دالة جلب البروتوكول العلاجي من جيميني ---
 # --- دالة جلب البروتوكول العلاجي من جيميني ---
 def get_ai_protocol(disease_search):
@@ -129,6 +132,7 @@ def get_ai_protocol(disease_search):
     except Exception as e:
         print(f"⚠️ AI Critical Error: {e}")
         return None
+
 # ---------------------------------------------
 # --- 3. المسارات (Routes) ---
 @app.route('/admin/toggle-print/<int:user_id>')
@@ -142,6 +146,7 @@ def toggle_print_permission(user_id):
     status = "Granted ✅" if user.can_print else "Revoked ❌"
     flash(f'Print permission {status} for {user.email}', 'success' if user.can_print else 'warning')
     return redirect(url_for('admin_dashboard'))
+
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
@@ -199,6 +204,7 @@ def home():
                     print(f"⚠️ Database Save Error: {e}")
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
+
 @app.route('/subscription')
 def subscription_expired():
     return render_template('subscribe.html') 
@@ -259,6 +265,7 @@ def add_manual():
     db.session.commit()
     flash('Manual Protocol Added with Secure Image!', 'success')
     return redirect(url_for('admin_dashboard'))
+
 # --- مسار تعديل بروتوكول موجود ---
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -292,6 +299,7 @@ def edit_protocol(id):
         return redirect(url_for('admin_dashboard'))
     
     return render_template('edit_protocol.html', protocol=p)
+
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
@@ -436,10 +444,11 @@ def setup_system():
                 ex_intensity=p.get("ei", "Moderate"),
                 evidence_level=p.get("ev", "Grade A"),
                 source_ref=p["src"], 
-                electrode_image=p["img"]
-                contraindications = db.Column(db.Text)
-    red_flags = db.Column(db.Text)
-    home_advice = db.Column(db.Text)
+                electrode_image=p["img"],
+                # تم تصحيح الخطأ هنا: إعطاء قيم فارغة لأن هذه الحقول غير موجودة في القائمة القديمة
+                contraindications=None,
+                red_flags=None,
+                home_advice=None
             )
             db.session.add(new_p)
         
@@ -501,18 +510,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
