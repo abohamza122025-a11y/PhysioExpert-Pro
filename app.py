@@ -116,59 +116,18 @@ def admin_required(f):
 # --- دالة جلب البروتوكول العلاجي من جيميني ---
 def get_ai_protocol(disease_search):
     try:
-        # تجهيز الأمر (Prompt) ليناسب تصميم موقعك
         prompt = f"""
-    Act as a Senior Clinical Physiotherapist Specialist. 
-        Create a high-level, evidence-based clinical treatment protocol for: "{disease_search}".
-        
-        CRITICAL OUTPUT INSTRUCTION: Return strictly valid JSON only. No Markdown.
-        
-        JSON Structure Requirements:
-        {{
-            "disease_name": "{disease_search} (Clinical Protocol)",
-            "keywords": "Pathology terms, ICD-10 related keywords",
-            "description": "Pathophysiology, mechanism of injury",
-            
-            "estim_type": "Specific waveform (e.g., TENS, IFC)",
-            "estim_params": "Freq (Hz), Pulse Width (us), Duration",
-            "estim_role": "Physiological effect",
-            "electrode_image": "default_ai.jpg",
-            
-            "us_type": "1MHz/3MHz, Pulsed/Continuous",
-            "us_params": "Intensity (W/cm2), Duty Cycle",
-            "us_role": "Thermal/Non-thermal effects",
-            
-            "exercises_list": "Phased rehab exercises (Acute -> Chronic)",
-            "exercises_role": "Functional goals",
-            
-            "contraindications": "List 3 absolute contraindications for therapy",
-            "red_flags": "Serious signs requiring medical referral",
-            "home_advice": "Simple advice for the patient at home",
-            
-            "source_ref": "Cited Clinical Guidelines"
-        }}
-        
-        If "{disease_search}" is not a medical condition, return JSON with key "error".
+        Act as an expert Physiotherapist. Create a treatment protocol for "{disease_search}".
+        Return valid JSON ONLY. No markdown.
+        Keys: "disease_name", "keywords", "description", "estim_type", "estim_params", "estim_role", "us_type", "us_params", "us_role", "exercises_list", "exercises_role", "contraindications", "red_flags", "home_advice", "source_ref"
         """
-        
         response = model.generate_content(prompt)
         text_response = response.text.strip()
-        
-        # تنظيف الرد
-        if text_response.startswith("```json"):
-            text_response = text_response[7:]
-        if text_response.endswith("```"):
-            text_response = text_response[:-3]
-
-        data = json.loads(text_response)
-        
-        if "error" in data:
-            return None
-            
-        return data
-
+        if "```" in text_response:
+            text_response = text_response.split("```")[1].replace("json", "")
+        return json.loads(text_response.strip())
     except Exception as e:
-        print(f"⚠️ AI Service Error: {e}")
+        print(f"⚠️ AI Critical Error: {e}")
         return None
 # ---------------------------------------------
 # --- 3. المسارات (Routes) ---
@@ -199,20 +158,18 @@ def home():
     result = None
     search_query = request.args.get('disease') or request.form.get('disease')
     
-    if search_query:
-        # أ: البحث في الداتا بيز المحلية
+  if search_query:
+        # استخدام ilike مع علامات % يضمن ظهور "Knee OA" لو بحثت عن "Knee" فقط
         term = f"%{search_query}%"
         result = Protocol.query.filter(
             (Protocol.disease_name.ilike(term)) | 
             (Protocol.keywords.ilike(term))
         ).first()
 
-        # ب: الذكاء الاصطناعي + الحفظ التلقائي (Auto-Learning)
         if not result:
             ai_data = get_ai_protocol(search_query)
-            
             if ai_data:
-                result = ai_data # للعرض الفوري
+                result = ai_data # نعرض بيانات الـ AI مباشرة للمستخدم
                 
                 # الحفظ في قاعدة البيانات
                 try:
@@ -482,6 +439,9 @@ def setup_system():
                 evidence_level=p.get("ev", "Grade A"),
                 source_ref=p["src"], 
                 electrode_image=p["img"]
+                contraindications = db.Column(db.Text)
+    red_flags = db.Column(db.Text)
+    home_advice = db.Column(db.Text)
             )
             db.session.add(new_p)
         
@@ -525,48 +485,25 @@ def update_db_schema_safe():
 @app.route('/admin/enhance/<int:id>')
 @admin_required
 def enhance_protocol_route(id):
-    # 1. هات البروتوكول القديم
     p = Protocol.query.get_or_404(id)
-    
-    # 2. اطلب من AI نسخة "دسمة" بناءً على اسم المرض فقط
     ai_data = get_ai_protocol(p.disease_name)
-    
     if ai_data:
-        try:
-            # 3. تحديث البيانات القديمة بالجديدة
-            p.description = ai_data.get('description')
-            p.keywords = ai_data.get('keywords')
-            p.estim_type = ai_data.get('estim_type')
-            p.estim_params = ai_data.get('estim_params')
-            p.estim_role = ai_data.get('estim_role')
-            p.us_type = ai_data.get('us_type')
-            p.us_params = ai_data.get('us_params')
-            p.us_role = ai_data.get('us_role')
-            p.exercises_list = ai_data.get('exercises_list')
-            p.exercises_role = ai_data.get('exercises_role')
-            p.source_ref = ai_data.get('source_ref')
-            
-            p.contraindications = ai_data.get('contraindications')
-            p.red_flags = ai_data.get('red_flags')
-            p.home_advice = ai_data.get('home_advice')
-            
-            # لو الصورة مش موجودة، حط صورة الـ AI
-            if not p.electrode_image or len(p.electrode_image) < 100:
-                p.electrode_image = ai_data.get('electrode_image')
-
-            db.session.commit()
-            flash(f'Magic Enhance Successful for: {p.disease_name}', 'success')
-        except Exception as e:
-            flash(f'Database Update Failed: {str(e)}', 'danger')
+        p.description = ai_data.get('description', p.description)
+        p.estim_type = ai_data.get('estim_type', p.estim_type)
+        p.estim_params = ai_data.get('estim_params', p.estim_params)
+        p.us_type = ai_data.get('us_type', p.us_type)
+        p.exercises_list = ai_data.get('exercises_list', p.exercises_list)
+        db.session.commit()
+        flash('Protocol Enhanced Successfully!', 'success')
     else:
-        flash('AI failed to generate enhanced data. Try again.', 'warning')
-
+        flash('AI was unable to enhance this protocol.', 'danger')
     return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
