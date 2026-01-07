@@ -492,38 +492,37 @@ def setup_system():
 @app.route('/update-db-schema-safe')
 # --- دالة التحديث الآمن (المصححة) ---
 @app.route('/update-db-schema-safe')
+# --- Safe Update Function (Clean Version) ---
+@app.route('/update-db-schema-safe')
 def update_db_schema_safe():
     try:
         with db.engine.connect() as conn:
-            # 1. تحديثات البروتوكول القديمة (لضمان وجودها)
+            # 1. Update Protocol Table (Old columns)
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT")); except: pass
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT")); except: pass
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT")); except: pass
 
-            # =========================================================
-            # 👇👇 2. إضافة عمود الطباعة للمستخدمين (المهم) 👇👇
-            # =========================================================
+            # 2. Update User Table (Add can_print)
             try:
                 conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT 0"))
-                print("✅ Added column: can_print to User table")
+                print("Success: Added column can_print to User table")
             except Exception as e:
-                print(f"ℹ️ Column 'can_print' might already exist: {e}")
-            # =========================================================
+                print(f"Info: Column can_print might already exist: {e}")
             
             conn.commit()
         
-        # 👇👇 هنا كان الخطأ، تم تصحيحه بوضع النص داخل أقواس بشكل سليم 👇👇
+        # HTML Response (Plain English)
         return """
-        <div style='font-family: Arial; text-align: center; margin-top: 50px;'>
-            <h1 style='color: green;'>✅ تم تحديث قاعدة البيانات بنجاح!</h1>
-            <p style='font-size: 18px;'>تمت إضافة خاصية الطباعة (can_print) وخانات البروتوكول.</p>
+        <div style='text-align: center; margin-top: 50px; font-family: Arial;'>
+            <h1 style='color: green;'>System Updated Successfully!</h1>
+            <p>Database schema is now up to date.</p>
             <br>
-            <a href='/' style='background: #0d6efd; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>العودة للصفحة الرئيسية</a>
+            <a href='/' style='background: #0d6efd; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Back to Home</a>
         </div>
         """
         
     except Exception as e:
-        return f"<h1>⚠️ Error: {str(e)}</h1>"
+        return f"<h1>Error: {str(e)}</h1>"
         <h1 style='color:green; text-align:center; margin-top:50px;'>
             ✅ تم تحديث قاعدة البيانات بنجاح!
             <br>
@@ -581,6 +580,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
