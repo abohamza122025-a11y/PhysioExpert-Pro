@@ -490,25 +490,20 @@ def setup_system():
     except Exception as e: return f"Error: {str(e)}"
 # --- استبدل دالة update_db_schema_safe القديمة بالكود ده ---
 @app.route('/update-db-schema-safe')
+# --- دالة التحديث الآمن (المصححة) ---
+@app.route('/update-db-schema-safe')
 def update_db_schema_safe():
     try:
         with db.engine.connect() as conn:
-            # 1. تحديث جدول البروتوكولات (القديم - سيبه زي ما هو للأمان)
-            try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT"))
-            except: pass
-            try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT"))
-            except: pass
-            try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT"))
-            except: pass
+            # 1. تحديثات البروتوكول القديمة (لضمان وجودها)
+            try: conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT")); except: pass
+            try: conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT")); except: pass
+            try: conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT")); except: pass
 
             # =========================================================
-            # 👇👇 2. (الجديد والمهم جداً) إضافة عمود الطباعة للمستخدمين 👇👇
+            # 👇👇 2. إضافة عمود الطباعة للمستخدمين (المهم) 👇👇
             # =========================================================
             try:
-                # السطر ده هو اللي هيسمحلك تتحكم في مين يطبع ومين لأ
                 conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT 0"))
                 print("✅ Added column: can_print to User table")
             except Exception as e:
@@ -516,17 +511,17 @@ def update_db_schema_safe():
             # =========================================================
             
             conn.commit()
-            
+        
+        # 👇👇 هنا كان الخطأ، تم تصحيحه بوضع النص داخل أقواس بشكل سليم 👇👇
         return """
-        <h1 style='color:green; text-align:center; margin-top:50px;'>
-            ✅ تم التحديث بنجاح!
+        <div style='font-family: Arial; text-align: center; margin-top: 50px;'>
+            <h1 style='color: green;'>✅ تم تحديث قاعدة البيانات بنجاح!</h1>
+            <p style='font-size: 18px;'>تمت إضافة خاصية الطباعة (can_print) وخانات البروتوكول.</p>
             <br>
-            <span style='font-size:20px; color:black;'>تمت إضافة خاصية (can_print) لقاعدة البيانات.</span>
-        </h1>
-        <div style='text-align:center;'>
-            <a href='/'>العودة للصفحة الرئيسية</a>
+            <a href='/' style='background: #0d6efd; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>العودة للصفحة الرئيسية</a>
         </div>
         """
+        
     except Exception as e:
         return f"<h1>⚠️ Error: {str(e)}</h1>"
         <h1 style='color:green; text-align:center; margin-top:50px;'>
@@ -586,6 +581,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
