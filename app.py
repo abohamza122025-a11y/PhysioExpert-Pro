@@ -145,7 +145,7 @@ def toggle_print_permission(user_id):
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # 1. التحقق من الاشتراك (كما هو)
+    # 1. التحقق من الاشتراك
     if not current_user.is_admin:
         days_passed = (datetime.utcnow() - current_user.created_at).days
         days_left = 30 - days_passed
@@ -158,20 +158,20 @@ def home():
     result = None
     search_query = request.args.get('disease') or request.form.get('disease')
     
-  if search_query:
-        # استخدام ilike مع علامات % يضمن ظهور "Knee OA" لو بحثت عن "Knee" فقط
+    if search_query:
+        # البحث في قاعدة البيانات
         term = f"%{search_query}%"
         result = Protocol.query.filter(
             (Protocol.disease_name.ilike(term)) | 
             (Protocol.keywords.ilike(term))
         ).first()
 
+        # لو مفيش نتيجة، شغل الذكاء الاصطناعي
         if not result:
             ai_data = get_ai_protocol(search_query)
             if ai_data:
-                result = ai_data # نعرض بيانات الـ AI مباشرة للمستخدم
-                
-                # الحفظ في قاعدة البيانات
+                result = ai_data
+                # حفظ الحالة الجديدة آلياً لتقوية قاعدة بياناتك
                 try:
                     new_p = Protocol(
                         disease_name=ai_data.get('disease_name'),
@@ -188,17 +188,15 @@ def home():
                         exercises_role=ai_data.get('exercises_role'),
                         source_ref=ai_data.get('source_ref'),
                         electrode_image=ai_data.get('electrode_image'),
-                        
-                        # الحقول الجديدة الدسمة
                         contraindications=ai_data.get('contraindications'),
                         red_flags=ai_data.get('red_flags'),
                         home_advice=ai_data.get('home_advice')
                     )
                     db.session.add(new_p)
                     db.session.commit()
-                    print(f"✅ Auto-Learned: {search_query}")
                 except Exception as e:
-                    print(f"⚠️ Cache Error: {e}")
+                    db.session.rollback()
+                    print(f"⚠️ Database Save Error: {e}")
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
 @app.route('/subscription')
@@ -503,6 +501,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
