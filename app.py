@@ -94,6 +94,7 @@ class Protocol(db.Model):
     source_ref = db.Column(db.String(300))
     electrode_image = db.Column(db.Text)  # يدعم المسار أو التشفير
     video_link = db.Column(db.String(500), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
@@ -163,12 +164,12 @@ def get_ai_protocol(disease_search):
 def update_db_schema():
     try:
         with db.engine.connect() as conn:
-            # أمر إضافة عمود boolean
-            conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT FALSE"))
+            # أمر إضافة عمود الملاحظات
+            conn.execute(text("ALTER TABLE protocol ADD COLUMN notes TEXT"))
             conn.commit()
-        return "<h1>✅ Permission Column Added!</h1>"
+        return "<h1>✅ Notes Column Added Successfully!</h1>"
     except Exception as e:
-        return f"<h1>Error: {str(e)}</h1>"
+        return f"<h1>Error/Info: {str(e)}</h1>"
 @app.route('/admin/toggle-print/<int:user_id>')
 @admin_required
 def toggle_print(user_id):
@@ -263,7 +264,8 @@ def add_manual():
         ex_progression=request.form.get('ex_progression'),
         evidence_level=request.form.get('evidence_level', 'Grade A'),
         source_ref=request.form['source_ref'],
-        video_link = request.form.get('video_link')
+        video_link = request.form.get('video_link'),
+        notes=request.form.get('notes'),
         electrode_image=image_data  # تخزين النص المشفر في قاعدة البيانات
     )
     db.session.add(p)
@@ -292,7 +294,8 @@ def edit_protocol(id):
         p.exercises_role = request.form.get('exercises_role')
         p.ex_frequency = request.form.get('ex_frequency')
         p.source_ref = request.form.get('source_ref')
-        video_link = request.form.get('video_link')
+        p.notes = request.form.get('notes')
+        p.video_link = request.form.get('video_link')
 
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
@@ -497,6 +500,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
