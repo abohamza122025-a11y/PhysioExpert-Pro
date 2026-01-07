@@ -493,36 +493,33 @@ def setup_system():
 def update_db_schema_safe():
     try:
         with db.engine.connect() as conn:
-            # 1. Update Protocol Table (Old columns)
-            try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT"))
-            except: pass
+            # استخدام EXECUTE بشكل مباشر ومستقل لكل عمود
+            # نضع اسم الجدول بين علامتي تنصيص مزدوجة لأن كلمة user محجوزة في PostgreSQL
             
+            # تحديث جدول البروتوكولات
             try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT"))
+                conn.execute(text('ALTER TABLE protocol ADD COLUMN IF NOT EXISTS contraindications TEXT'))
             except: pass
-            
             try:
-                conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT"))
+                conn.execute(text('ALTER TABLE protocol ADD COLUMN IF NOT EXISTS red_flags TEXT'))
+            except: pass
+            try:
+                conn.execute(text('ALTER TABLE protocol ADD COLUMN IF NOT EXISTS home_advice TEXT'))
             except: pass
 
-            # 2. Update User Table (Add can_print)
+            # تحديث جدول المستخدمين (المهم جداً)
             try:
-                conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT 0"))
-            except: pass
+                # في PostgreSQL يجب كتابة "user" هكذا لأنها كلمة محجوزة
+                conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS can_print BOOLEAN DEFAULT FALSE'))
+                print("Column can_print added successfully")
+            except Exception as db_err:
+                print(f"Database detail error: {db_err}")
             
             conn.commit()
             
-        return """
-        <div style='text-align: center; margin-top: 50px; font-family: Arial;'>
-            <h1 style='color: green;'>System Updated Successfully!</h1>
-            <p>Database schema is now up to date.</p>
-            <br>
-            <a href='/' style='background: #0d6efd; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Back to Home</a>
-        </div>
-        """
+        return "Database Schema Updated Successfully! You can go back home now."
     except Exception as e:
-        return f"<h1>Error: {str(e)}</h1>"
+        return f"Main Error: {str(e)}"
 
 
 @app.route('/admin/enhance/<int:id>')
@@ -570,6 +567,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
