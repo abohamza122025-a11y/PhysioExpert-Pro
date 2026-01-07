@@ -497,7 +497,6 @@ def update_db_schema_safe():
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT")); except: pass
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT")); except: pass
             try: conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT")); except: pass
-
             # 2. Update User Table (Add can_print)
             try:
                 conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT 0"))
@@ -507,7 +506,6 @@ def update_db_schema_safe():
             
             conn.commit()
         
-        # HTML Response (Plain English)
         return """
         <div style='text-align: center; margin-top: 50px; font-family: Arial;'>
             <h1 style='color: green;'>System Updated Successfully!</h1>
@@ -520,7 +518,7 @@ def update_db_schema_safe():
     except Exception as e:
         return f"<h1>Error: {str(e)}</h1>"
 
-# --- مسار التحسين بالذكاء الاصطناعي (Magic Enhance) ---
+
 @app.route('/admin/enhance/<int:id>')
 @admin_required
 def enhance_protocol_route(id):
@@ -545,7 +543,6 @@ def enhance_protocol_route(id):
             p.exercises_role = ai_data.get('exercises_role')
             p.source_ref = ai_data.get('source_ref')
             
-            # تحديث الحقول الجديدة
             p.contraindications = ai_data.get('contraindications')
             p.red_flags = ai_data.get('red_flags')
             p.home_advice = ai_data.get('home_advice')
@@ -567,6 +564,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
