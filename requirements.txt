@@ -7,3 +7,4 @@ flask-mail
 psycopg2-binary
 pandas
 openpyxl
+google-generativeai
