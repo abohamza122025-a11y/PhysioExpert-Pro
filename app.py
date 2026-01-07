@@ -488,10 +488,7 @@ def setup_system():
         db.session.commit()
         return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
-# --- استبدل دالة update_db_schema_safe القديمة بالكود ده ---
-@app.route('/update-db-schema-safe')
-# --- دالة التحديث الآمن (المصححة) ---
-# --- Safe Update Function (Clean Version) ---
+
 @app.route('/update-db-schema-safe')
 def update_db_schema_safe():
     try:
@@ -570,6 +567,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
