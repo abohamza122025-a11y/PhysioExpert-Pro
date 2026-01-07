@@ -3,231 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physio Expert Pro 2026</title>
+    <title>Physio Expert Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- التنسيقات العامة --- */
+        body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
+        
+        /* --- Hero Section --- */
         .hero-section { 
-            background: linear-gradient(135deg, #1e3c72, #2a5298, #2c5364); 
-            color: white; padding: 80px 0; border-radius: 0 0 40px 40px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .navbar-custom {
-            background-color: #e3f2fd !important; 
-            border-bottom: 2px solid #bbdefb;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .navbar-custom .navbar-brand { color: #1e3c72 !important; font-size: 1.5rem; }
-        .clinical-card { border-radius: 25px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        .dosage-item { background: #f8f9fa; border-radius: 15px; padding: 20px; border-bottom: 5px solid #0d6efd; transition: 0.3s; }
-        .dosage-item:hover { transform: translateY(-5px); background: #fff; }
-        .bg-medical-blue { background-color: #bbdefb !important; color: #0d47a1 !important; }
-
-        /* --- أنيميشن الأيقونات الطبية --- */
-        .fa-bolt { animation: lightning 2s infinite; }
-        .fa-wave-square { animation: pulse-wave 2s infinite; }
-        @keyframes lightning {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); color: #ffc107; }
-        }
-        @keyframes pulse-wave {
-            0% { transform: scaleX(1); }
-            50% { transform: scaleX(1.2); color: #00bcd4; }
-            100% { transform: scaleX(1); }
+            background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
+            color: white; 
+            padding: 70px 0; 
+            margin-bottom: 40px; 
+            border-radius: 0 0 40px 40px;
+            box-shadow: 0 10px 30px rgba(13, 110, 253, 0.15);
         }
 
-        /* --- إعدادات الطباعة الاحترافية --- */
-        @media print {
-            .no-print, .navbar, .hero-section, footer, .btn, form { display: none !important; }
-            body { background: white !important; }
-            .container { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
-            .clinical-card { box-shadow: none !important; border: 1px solid #eee !important; }
-            .card-header { background-color: #bbdefb !important; -webkit-print-color-adjust: exact; }
+        /* --- Professional Cards for Modalities --- */
+        .card-custom { 
+            border: none; 
+            border-radius: 20px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            overflow: hidden;
         }
+        .card-custom:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+
+        /* --- Mint Table Style --- */
+        .mint-table-container {
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #c3e6cb;
+            background-color: #f0fff4;
+        }
+
+        /* --- Styles for Exercises (Your custom code) --- */
+        .exercise-item { transition: 0.3s; border-radius: 10px; margin-bottom: 8px; }
+        .exercise-item:hover { background-color: #f0fff4 !important; transform: translateX(5px); }
+        .bg-success-soft { background-color: #e8f5e9; color: #2e7d32; }
+
+        /* --- New: Cyan Text Class for Footer --- */
+        .text-cyan-theme { color: #0dcaf0 !important; }
     </style>
 </head>
-<body class="bg-light text-dark">
+<body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top no-print">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/">PHYSIO EXPERT PRO 🩺</a>
-        <div class="ms-auto d-flex align-items-center">
-            {% if current_user.is_authenticated %}
-                {% if current_user.is_admin %}
-                <a href="/admin" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold me-3 shadow-sm">
-                    <i class="fas fa-cog me-1"></i> CONTROL PANEL
-                </a>
-                {% endif %}
-                <span class="text-primary me-3 small fw-bold"><i class="fas fa-user-md me-1"></i> {{ current_user.email }}</span>
-                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold">Logout</a>
-            {% else %}
-                <a href="/login" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Login</a>
+<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3">
+  <div class="container">
+    <a class="navbar-brand fw-bold text-primary fs-4" href="/">
+        <i class="fas fa-heartbeat me-2"></i>Physio Expert Pro
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-center gap-3">
+        {% if current_user.is_authenticated %}
+            {% if current_user.is_admin %}
+                <li class="nav-item">
+                    <a href="/admin" class="btn btn-warning btn-sm fw-bold text-dark px-3 rounded-pill"><i class="fas fa-cog"></i> Admin</a>
+                </li>
             {% endif %}
-        </div>
+            <li class="nav-item text-secondary">
+                <small class="text-muted d-block lh-1" style="font-size: 0.75rem;">Logged in as</small>
+                <span class="fw-bold text-dark">{{ user.email.split('@')[0] }}</span>
+            </li>
+            <li class="nav-item">
+                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">Logout</a>
+            </li>
+        {% else %}
+            <li class="nav-item"><a href="/login" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Login</a></li>
+            <li class="nav-item"><a href="/register" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">Register</a></li>
+        {% endif %}
+      </ul>
     </div>
+  </div>
 </nav>
 
-<div class="hero-section text-center mb-5 no-print">
+<div class="hero-section text-center">
     <div class="container">
-        <h1 class="display-3 fw-bold mb-3">Physio Expert Pro</h1>
-        <p class="lead mb-5 opacity-75">Professional Evidence-Based Protocols</p>
+        <h1 class="display-4 fw-bold mb-3">Physio Expert Pro</h1>
+        <p class="lead mb-4 opacity-75 fw-light" style="font-size: 1.25rem;">Advanced Physiotherapy Protocols</p>
         <div class="row justify-content-center">
-            <div class="col-md-7">
-                <form action="/" method="POST" class="input-group input-group-lg shadow-lg rounded-pill overflow-hidden">
-                    <input type="text" name="disease" class="form-control border-0 px-4" placeholder="Search for condition (e.g., Back Pain, ACL)...">
-                    <button class="btn btn-warning px-5 fw-bold" type="submit">SEARCH</button>
+            <div class="col-md-7 col-lg-6">
+                <form action="/" method="POST" class="position-relative">
+                    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="Search condition (e.g. Osteoarthtitis, Stroke...)" required style="font-size: 1.1rem;">
+                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
+                        <i class="fas fa-search me-2"></i> Search
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<div class="container">
-   {% if result %}
-<div class="d-flex justify-content-end mb-4 no-print">
-    <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
-        <i class="fas fa-print me-2"></i> Print Medical Protocol (PDF)
-    </button>
-</div>
-
-<div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-5">
+<div class="container" style="margin-top: -30px; position: relative; z-index: 2;">
+    {% if result %}
     
-    <div class="card-header p-4 border-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);">
-        <div class="d-flex justify-content-between align-items-center">
+    <div class="mb-5">
+        
+        <div class="card-custom p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="badge bg-primary px-3 py-2 rounded-pill mb-2 shadow-sm">{{ result.category }}</span>
-                <h1 class="display-5 fw-bold text-dark mb-0" style="letter-spacing: -1px;">{{ result.disease_name }}</h1>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill mb-2">Protocol Result</span>
+                <h2 class="fw-bold text-dark mb-0 display-6">{{ result.disease_name }}</h2>
             </div>
-            <div class="text-end">
-                <span class="badge bg-success px-4 py-2 rounded-pill shadow-sm mb-2">{{ result.evidence_level }}</span>
+            <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fs-6">{{ result.keywords.split(',')[0] }}</span>
+        </div>
+        
+        <div class="mint-table-container shadow-sm mb-5">
+            <div class="bg-success text-white p-3 ps-4 fw-bold d-flex align-items-center">
+                <i class="fas fa-notes-medical me-2 fs-5"></i> Clinical Presentation & Definition
+            </div>
+            <div class="p-4 text-dark" style="font-size: 1.1rem; line-height: 1.7; color: #1e4c2e;">
+                {{ result.description }}
             </div>
         </div>
-    </div>
 
-    <div class="card-body p-4 p-lg-5">
-        <div class="row align-items-start mb-5 g-4">
-            <div class="col-md-7">
-                <h5 class="text-primary fw-bold text-uppercase mb-3" style="font-size: 0.9rem; letter-spacing: 1px;">
-                    <i class="fas fa-notes-medical me-2"></i> Clinical Presentation
-                </h5>
-                <p class="text-secondary lh-base" style="font-size: 1.1rem;">{{ result.description }}</p>
-                
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="p-3 border-start border-4 border-primary bg-light rounded-2">
-                            <h6 class="fw-bold small text-dark mb-1">Electrotherapy (ESTIM)</h6>
-                            <p class="mb-0 small text-muted"><strong>Params:</strong> {{ result.estim_params }}</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 border-start border-4 border-success bg-light rounded-2">
-                            <h6 class="fw-bold small text-dark mb-1">Ultrasound (US)</h6>
-                            <p class="mb-0 small text-muted"><strong>Params:</strong> {{ result.us_params }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="row g-4 mb-5 align-items-stretch">
             
-            <div class="col-md-5 text-center">
-                {% if result.electrode_image %}
-                    <div class="p-2 border rounded-4 bg-white shadow-sm d-inline-block">
-                        <img src="{{ result.electrode_image }}" class="img-fluid rounded-3" style="max-height: 280px;" alt="Electrode Placement">
-                        <p class="mt-2 mb-0 small text-muted fw-bold">Electrode Placement Map</p>
+            <div class="col-md-6">
+                <div class="card-custom h-100 p-4 border-start border-5 border-primary">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3 text-primary d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-bolt fa-lg"></i>
+                        </div>
+                        <h5 class="fw-bold text-primary mb-0">Electrotherapy</h5>
                     </div>
-                {% endif %}
+                    <hr class="text-muted opacity-25">
+                    <div class="mb-2">
+                         <p class="mb-1"><strong>Type:</strong> <span class="badge bg-primary-subtle text-primary border border-primary">{{ result.estim_type }}</span></p>
+                    </div>
+                    <div class="p-2 bg-light rounded mb-3">
+                        <small class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">Parameters</small>
+                        <p class="mb-0 text-dark small">{{ result.estim_params }}</p>
+                    </div>
+
+                    <div class="text-center my-3 p-2 border rounded bg-white">
+                         <h6 class="text-primary fw-bold mb-2" style="font-size: 0.8rem;">Electrode Placement Guide</h6>
+                         {% if result.electrode_image %}
+                            {% if 'data:image' in result.electrode_image %}
+                                <img src="{{ result.electrode_image }}" class="img-fluid rounded border shadow-sm" style="max-height: 150px;">
+                            {% else %}
+                                <img src="{{ url_for('static', filename=result.Electrode_image) }}" 
+                                     class="img-fluid rounded border shadow-sm" style="max-height: 150px;" 
+                                     onerror="this.parentElement.innerHTML='<span class=\'text-muted small\'>Image Not Found</span>';">
+                            {% endif %}
+                        {% else %}
+                             <span class="text-muted small">No Image Available</span>
+                        {% endif %}
+                    </div>
+
+                    <p class="small text-muted mt-auto fst-italic border-top pt-2"><strong>Goal:</strong> {{ result.estim_role }}</p>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card-custom h-100 p-4 border-start border-5 border-success">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3 text-success d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-wave-square fa-lg"></i>
+                        </div>
+                        <h5 class="fw-bold text-success mb-0">Ultrasound</h5>
+                    </div>
+                    <hr class="text-muted opacity-25">
+                     <div class="mb-2">
+                        <p class="mb-1"><strong>Type:</strong> <span class="badge bg-success-subtle text-success border border-success">{{ result.us_type }}</span></p>
+                    </div>
+                    <div class="p-2 bg-light rounded mb-3">
+                        <small class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">Parameters</small>
+                        <p class="mb-0 text-dark small">{{ result.us_params }}</p>
+                    </div>
+                    <p class="small text-muted mt-auto fst-italic border-top pt-2"><strong>Goal:</strong> {{ result.us_role }}</p>
+                </div>
             </div>
         </div>
 
-        <div class="row g-4 mb-5">
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-3" style="border-top: 5px solid #0d6efd;">
-                    <div class="card-body">
-                        <i class="fas fa-clock text-primary fa-2x mb-3"></i>
-                        <h6 class="text-muted fw-bold small text-uppercase">Frequency</h6>
-                        <h4 class="fw-bold mb-0 text-dark">{{ result.ex_frequency }}</h4>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card h-100 border-0 shadow-sm" style="background-color: #f8fdf9; border-radius: 15px;">
+                    <div class="card-header bg-success text-white fw-bold py-3" style="border-radius: 15px 15px 0 0;">
+                        <i class="fas fa-running me-2"></i> Therapeutic Exercises 
                     </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-3" style="border-top: 5px solid #198754;">
-                    <div class="card-body">
-                        <i class="fas fa-weight-hanging text-success fa-2x mb-3"></i>
-                        <h6 class="text-muted fw-bold small text-uppercase">Intensity</h6>
-                        <h4 class="fw-bold mb-0 text-dark">{{ result.ex_intensity }}</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-3" style="border-top: 5px solid #ffc107;">
-                    <div class="card-body">
-                        <i class="fas fa-chart-line text-warning fa-2x mb-3"></i>
-                        <h6 class="text-muted fw-bold small text-uppercase">Progression</h6>
-                        <h4 class="fw-bold mb-0 text-dark">Stage-Based</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <h5 class="text-primary fw-bold mb-4"><i class="fas fa-dumbbell me-2"></i> Evidence-Based Exercise Protocol</h5>
-        <div class="table-responsive rounded-4 border shadow-sm mb-5">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background-color: #f1f6ff;">
-                    <tr>
-                        <th class="py-3 ps-4 border-0">Exercise Item</th>
-                        <th class="py-3 border-0">Rationale / Goal</th>
-                        <th class="py-3 text-center border-0">Instruction</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ex in result.exercises_list | split_list %}
-                    <tr>
-                        <td class="ps-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <span class="bg-primary-subtle text-primary rounded-circle p-2 me-3 d-flex justify-content-center align-items-center" style="width: 35px; height: 35px;">
-                                    <i class="fas fa-play fa-xs"></i>
-                                </span>
-                                <span class="fw-bold text-dark" style="font-size: 1.05rem;">{{ ex }}</span>
+                    <div class="card-body p-4">
+                        <div class="list-group list-group-flush bg-transparent">
+                            {% for exercise in result.exercises_list | split_list %}
+                            <div class="list-group-item bg-transparent border-0 d-flex align-items-center exercise-item p-2">
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 28px; height: 28px; flex-shrink: 0;">
+                                    <i class="fas fa-check fa-xs"></i>
+                                </div>
+                                <span class="fs-5 text-dark">{{ exercise }}</span>
                             </div>
-                        </td>
-                        <td class="text-muted">{{ result.exercises_role }}</td>
-                        <td class="text-center">
-                            <span class="badge bg-white text-dark border px-3 py-2 rounded-pill small fw-normal">Scientific Protocol</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-7">
-                <div class="p-4 bg-light rounded-4 border-start border-4 border-info h-100 shadow-sm">
-                    <h6 class="fw-bold text-info mb-3"><i class="fas fa-directions me-2"></i> PROGRESSION CRITERIA</h6>
-                    <p class="mb-0 text-secondary" style="font-size: 0.95rem;">{{ result.ex_progression or 'Gradual increase in resistance/ROM based on pain-free tolerance.' }}</p>
-                </div>
-            </div>
-            <div class="col-md-5">
-                <div class="p-4 bg-light rounded-4 border h-100 shadow-sm position-relative overflow-hidden">
-                    <h6 class="fw-bold text-dark mb-3"><i class="fas fa-book-reader me-2"></i> SCIENTIFIC REFERENCE</h6>
-                    <p class="mb-3 small text-muted font-monospace">{{ result.source_ref }}</p>
-                    <div class="bg-danger-subtle text-danger p-2 rounded-3 d-inline-block fw-bold small">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Safety First: Monitor VAS Scale.
+                            {% else %}
+                            <p class="text-muted">No specific exercises listed for this protocol.</p>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-4 p-3 bg-white border-start border-warning border-4 rounded shadow-sm">
+                            <h6 class="fw-bold text-warning-emphasis"><i class="fas fa-bullseye me-2"></i> Exercise Goal:</h6>
+                            <p class="mb-0">{{ result.exercises_role }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-{% endif %}
 
-    <footer class="text-center mt-5 mb-4 py-4 border-top no-print">
-        <p class="mb-1 fw-bold text-secondary">© 2026 Physio Expert Pro</p>
-        <p class="small text-danger fw-bold">{{ disclaimer }}</p>
+        <div class="d-flex justify-content-center mt-2">
+            <div class="bg-white px-4 py-2 rounded-pill border shadow-sm text-center">
+                 <small class="text-muted fw-bold me-2">SCIENTIFIC REFERENCE:</small>
+                 <small class="text-dark fst-italic">{{ result.source_ref }}</small>
+            </div>
+        </div>
+
+    </div>
+    {% elif request.method == 'POST' %}
+        <div class="text-center py-5">
+            <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
+                <i class="fas fa-search fa-3x text-primary opacity-50"></i>
+            </div>
+            <h3 class="fw-bold">No results found.</h3>
+            <p class="text-muted">Try searching for keywords like "Knee", "Shoulder", or "Stroke".</p>
+        </div>
+    {% endif %}
+
+    <footer class="text-center text-muted mt-5 mb-3 pt-5 border-top">
+        <p class="mb-1 fw-bold text-cyan-theme">© 2026 Physio Expert Pro</p>
+        <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> {{ disclaimer }}</p>
+        <p class="small">Support: <a href="mailto:{{ support_email }}" class="text-decoration-none fw-bold text-cyan-theme">{{ support_email }}</a></p>
     </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
