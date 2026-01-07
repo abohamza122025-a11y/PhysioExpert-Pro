@@ -69,7 +69,7 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription_end = db.Column(db.DateTime, nullable=True)
-
+    can_print = db.Column(db.Boolean, default=False) # هل مسموح له يطبع؟
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(100), default="General")
@@ -172,7 +172,17 @@ def get_ai_protocol(disease_search):
         return None
 # ---------------------------------------------
 # --- 3. المسارات (Routes) ---
-
+@app.route('/admin/toggle-print/<int:user_id>')
+@admin_required
+def toggle_print_permission(user_id):
+    user = User.query.get_or_404(user_id)
+    # اعكس الحالة (لو شغال اقفله، لو مقفول شغله)
+    user.can_print = not user.can_print
+    db.session.commit()
+    
+    status = "Granted ✅" if user.can_print else "Revoked ❌"
+    flash(f'Print permission {status} for {user.email}', 'success' if user.can_print else 'warning')
+    return redirect(url_for('admin_dashboard'))
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
@@ -478,34 +488,47 @@ def setup_system():
         db.session.commit()
         return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
+# --- استبدل دالة update_db_schema_safe القديمة بالكود ده ---
 @app.route('/update-db-schema-safe')
 def update_db_schema_safe():
     try:
         with db.engine.connect() as conn:
-            # 1. إضافة عمود موانع الاستخدام
+            # 1. تحديث جدول البروتوكولات (القديم - سيبه زي ما هو للأمان)
             try:
                 conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT"))
-                print("✅ Added column: contraindications")
-            except Exception as e:
-                print(f"ℹ️ Column 'contraindications' might already exist or error: {e}")
-
-            # 2. إضافة عمود علامات الخطر
+            except: pass
             try:
                 conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT"))
-                print("✅ Added column: red_flags")
-            except Exception as e:
-                print(f"ℹ️ Column 'red_flags' might already exist or error: {e}")
-
-            # 3. إضافة عمود النصائح المنزلية
+            except: pass
             try:
                 conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT"))
-                print("✅ Added column: home_advice")
+            except: pass
+
+            # =========================================================
+            # 👇👇 2. (الجديد والمهم جداً) إضافة عمود الطباعة للمستخدمين 👇👇
+            # =========================================================
+            try:
+                # السطر ده هو اللي هيسمحلك تتحكم في مين يطبع ومين لأ
+                conn.execute(text("ALTER TABLE user ADD COLUMN can_print BOOLEAN DEFAULT 0"))
+                print("✅ Added column: can_print to User table")
             except Exception as e:
-                print(f"ℹ️ Column 'home_advice' might already exist or error: {e}")
+                print(f"ℹ️ Column 'can_print' might already exist: {e}")
+            # =========================================================
             
             conn.commit()
             
         return """
+        <h1 style='color:green; text-align:center; margin-top:50px;'>
+            ✅ تم التحديث بنجاح!
+            <br>
+            <span style='font-size:20px; color:black;'>تمت إضافة خاصية (can_print) لقاعدة البيانات.</span>
+        </h1>
+        <div style='text-align:center;'>
+            <a href='/'>العودة للصفحة الرئيسية</a>
+        </div>
+        """
+    except Exception as e:
+        return f"<h1>⚠️ Error: {str(e)}</h1>"
         <h1 style='color:green; text-align:center; margin-top:50px;'>
             ✅ تم تحديث قاعدة البيانات بنجاح!
             <br>
@@ -563,6 +586,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
