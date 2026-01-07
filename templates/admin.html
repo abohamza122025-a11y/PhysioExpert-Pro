@@ -154,7 +154,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 mt-5 mb-5">
+               <div class="col-12 mt-5 mb-5">
                     <div class="card shadow-sm border-start border-warning border-5">
                         <div class="card-header bg-warning text-dark p-3">
                             <h5 class="mb-0"><i class="fas fa-users me-2"></i> Registered Students Management</h5>
@@ -164,26 +164,27 @@
                                 <thead class="table-light text-center">
                                     <tr>
                                         <th class="text-start ps-4">Student Email</th>
-                                        <th>Security Action</th>
+                                        <th>PDF Permission</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for u in users %}
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ u.email }}</td>
-                                       <th class="text-center">PDF Permission</th> 
-                                    
-                                    <td class="text-center">
-                                        {% if u.can_print %}
-                                            <a href="/admin/toggle-print/{{ u.id }}" class="btn btn-sm btn-success text-white">
-                                                <i class="fas fa-check-circle"></i> Allowed
-                                            </a>
-                                        {% else %}
-                                            <a href="/admin/toggle-print/{{ u.id }}" class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-times-circle"></i> Denied
-                                            </a>
-                                        {% endif %}
-                                    </td>
+                                        <td class="text-center">
+                                            {% if u.can_print %}
+                                                <a href="/admin/toggle-print/{{ u.id }}" class="btn btn-sm btn-success text-white">
+                                                    <i class="fas fa-check-circle"></i> Allowed
+                                                </a>
+                                            {% else %}
+                                                <a href="/admin/toggle-print/{{ u.id }}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-times-circle"></i> Denied
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
                             </table>
                         </div>
                     </div>
