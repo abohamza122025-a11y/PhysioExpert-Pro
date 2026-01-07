@@ -5,6 +5,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename  # لتأمين أسماء الصور المرفوعة
@@ -89,7 +90,13 @@ class Protocol(db.Model):
     evidence_level = db.Column(db.String(50), default="Grade A")
     source_ref = db.Column(db.String(300))
     electrode_image = db.Column(db.Text)
+    # ... (باقي الحقول اللي فوق زي ما هي) ...
+    electrode_image = db.Column(db.Text)
     
+    # 👇👇 ضيف السطور دي هنا 👇👇
+    contraindications = db.Column(db.Text) # موانع الاستخدام
+    red_flags = db.Column(db.Text)         # علامات الخطر
+    home_advice = db.Column(db.Text)       # نصائح منزلية
     # --- الحقول الجديدة (تم ضبط المسافات) ---
     contraindications = db.Column(db.Text) # موانع الاستخدام
     red_flags = db.Column(db.Text)         # علامات الخطر
@@ -111,32 +118,34 @@ def get_ai_protocol(disease_search):
     try:
         # تجهيز الأمر (Prompt) ليناسب تصميم موقعك
         prompt = f"""
-      Act as a Senior Clinical Physiotherapist Specialist with 20 years of experience. 
+    Act as a Senior Clinical Physiotherapist Specialist. 
         Create a high-level, evidence-based clinical treatment protocol for: "{disease_search}".
         
         CRITICAL OUTPUT INSTRUCTION: Return strictly valid JSON only. No Markdown.
         
-        The content must be CLINICALLY DENSE. Do not give generic advice. Give specific parameters.
-        
-        JSON Structure & Content Requirements:
+        JSON Structure Requirements:
         {{
             "disease_name": "{disease_search} (Clinical Protocol)",
             "keywords": "Pathology terms, ICD-10 related keywords",
-            "description": "Pathophysiology, mechanism of injury, and key clinical signs (Red Flags if any).",
+            "description": "Pathophysiology, mechanism of injury",
             
-            "estim_type": "Specific waveform (e.g., Biphasic TENS, Interferential, Russian)",
-            "estim_params": "EXACT Params: Freq (Hz), Pulse Width (us), On/Off time, Electrode placement",
-            "estim_role": "Physiological effect (e.g., Gate Control Theory, Opiate Release)",
+            "estim_type": "Specific waveform (e.g., TENS, IFC)",
+            "estim_params": "Freq (Hz), Pulse Width (us), Duration",
+            "estim_role": "Physiological effect",
             "electrode_image": "default_ai.jpg",
             
-            "us_type": "Specifics: 1MHz (Deep) or 3MHz (Superficial), Pulsed vs Continuous",
-            "us_params": "Intensity (W/cm2), Duty Cycle (%), Duration (mins), ERA",
-            "us_role": "Thermal vs Non-thermal effects (e.g., acoustic streaming, collagen extensibility)",
+            "us_type": "1MHz/3MHz, Pulsed/Continuous",
+            "us_params": "Intensity (W/cm2), Duty Cycle",
+            "us_role": "Thermal/Non-thermal effects",
             
-            "exercises_list": "Divide into 3 Phases: 1. Protection/Acute (Isometrics), 2. Restoration (Isotonics/ROM), 3. Return to Function (Plyometrics/Proprioception). Mention Sets/Reps.",
-            "exercises_role": "Target tissues and functional goals for each phase.",
+            "exercises_list": "Phased rehab exercises (Acute -> Chronic)",
+            "exercises_role": "Functional goals",
             
-            "source_ref": "Cited Clinical Guidelines (e.g., APTA, NICE, Cochrane Review)"
+            "contraindications": "List 3 absolute contraindications for therapy",
+            "red_flags": "Serious signs requiring medical referral",
+            "home_advice": "Simple advice for the patient at home",
+            
+            "source_ref": "Cited Clinical Guidelines"
         }}
         
         If "{disease_search}" is not a medical condition, return JSON with key "error".
@@ -167,7 +176,7 @@ def get_ai_protocol(disease_search):
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    # 1. كود الاشتراك (زي ما هو)
+    # 1. التحقق من الاشتراك (كما هو)
     if not current_user.is_admin:
         days_passed = (datetime.utcnow() - current_user.created_at).days
         days_left = 30 - days_passed
@@ -177,7 +186,6 @@ def home():
     else:
         days_left = "Unlimited (Admin)"
 
-    # 2. بداية البحث (لاحظ المسافات هنا اتظبطت)
     result = None
     search_query = request.args.get('disease') or request.form.get('disease')
     
@@ -189,9 +197,41 @@ def home():
             (Protocol.keywords.ilike(term))
         ).first()
 
-        # ب: الإضافة الجديدة (لو ملقاش نتيجة، اسأل AI)
+        # ب: الذكاء الاصطناعي + الحفظ التلقائي (Auto-Learning)
         if not result:
-            result = get_ai_protocol(search_query)
+            ai_data = get_ai_protocol(search_query)
+            
+            if ai_data:
+                result = ai_data # للعرض الفوري
+                
+                # الحفظ في قاعدة البيانات
+                try:
+                    new_p = Protocol(
+                        disease_name=ai_data.get('disease_name'),
+                        category="AI Generated",
+                        keywords=ai_data.get('keywords'),
+                        description=ai_data.get('description'),
+                        estim_type=ai_data.get('estim_type'),
+                        estim_params=ai_data.get('estim_params'),
+                        estim_role=ai_data.get('estim_role'),
+                        us_type=ai_data.get('us_type'),
+                        us_params=ai_data.get('us_params'),
+                        us_role=ai_data.get('us_role'),
+                        exercises_list=ai_data.get('exercises_list'),
+                        exercises_role=ai_data.get('exercises_role'),
+                        source_ref=ai_data.get('source_ref'),
+                        electrode_image=ai_data.get('electrode_image'),
+                        
+                        # الحقول الجديدة الدسمة
+                        contraindications=ai_data.get('contraindications'),
+                        red_flags=ai_data.get('red_flags'),
+                        home_advice=ai_data.get('home_advice')
+                    )
+                    db.session.add(new_p)
+                    db.session.commit()
+                    print(f"✅ Auto-Learned: {search_query}")
+                except Exception as e:
+                    print(f"⚠️ Cache Error: {e}")
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
 @app.route('/subscription')
@@ -438,11 +478,92 @@ def setup_system():
         db.session.commit()
         return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
+@app.route('/update-db-schema-safe')
+def update_db_schema_safe():
+    try:
+        with db.engine.connect() as conn:
+            # 1. إضافة عمود موانع الاستخدام
+            try:
+                conn.execute(text("ALTER TABLE protocol ADD COLUMN contraindications TEXT"))
+                print("✅ Added column: contraindications")
+            except Exception as e:
+                print(f"ℹ️ Column 'contraindications' might already exist or error: {e}")
 
+            # 2. إضافة عمود علامات الخطر
+            try:
+                conn.execute(text("ALTER TABLE protocol ADD COLUMN red_flags TEXT"))
+                print("✅ Added column: red_flags")
+            except Exception as e:
+                print(f"ℹ️ Column 'red_flags' might already exist or error: {e}")
+
+            # 3. إضافة عمود النصائح المنزلية
+            try:
+                conn.execute(text("ALTER TABLE protocol ADD COLUMN home_advice TEXT"))
+                print("✅ Added column: home_advice")
+            except Exception as e:
+                print(f"ℹ️ Column 'home_advice' might already exist or error: {e}")
+            
+            conn.commit()
+            
+        return """
+        <h1 style='color:green; text-align:center; margin-top:50px;'>
+            ✅ تم تحديث قاعدة البيانات بنجاح!
+            <br>
+            <span style='font-size:20px; color:black;'>تمت إضافة الأعمدة الجديدة ولم يتم حذف أي بيانات.</span>
+        </h1>
+        <div style='text-align:center;'>
+            <a href='/'>العودة للصفحة الرئيسية</a>
+        </div>
+        """
+    except Exception as e:
+        return f"<h1>⚠️ Error: {str(e)}</h1>"
+        # --- مسار التحسين بالذكاء الاصطناعي (Magic Enhance) ---
+@app.route('/admin/enhance/<int:id>')
+@admin_required
+def enhance_protocol_route(id):
+    # 1. هات البروتوكول القديم
+    p = Protocol.query.get_or_404(id)
+    
+    # 2. اطلب من AI نسخة "دسمة" بناءً على اسم المرض فقط
+    ai_data = get_ai_protocol(p.disease_name)
+    
+    if ai_data:
+        try:
+            # 3. تحديث البيانات القديمة بالجديدة
+            p.description = ai_data.get('description')
+            p.keywords = ai_data.get('keywords')
+            p.estim_type = ai_data.get('estim_type')
+            p.estim_params = ai_data.get('estim_params')
+            p.estim_role = ai_data.get('estim_role')
+            p.us_type = ai_data.get('us_type')
+            p.us_params = ai_data.get('us_params')
+            p.us_role = ai_data.get('us_role')
+            p.exercises_list = ai_data.get('exercises_list')
+            p.exercises_role = ai_data.get('exercises_role')
+            p.source_ref = ai_data.get('source_ref')
+            
+            # تحديث الحقول الجديدة
+            p.contraindications = ai_data.get('contraindications')
+            p.red_flags = ai_data.get('red_flags')
+            p.home_advice = ai_data.get('home_advice')
+            
+            # لو الصورة مش موجودة، حط صورة الـ AI
+            if not p.electrode_image or len(p.electrode_image) < 100:
+                p.electrode_image = ai_data.get('electrode_image')
+
+            db.session.commit()
+            flash(f'✨ Magic Enhance Successful for: {p.disease_name}', 'success')
+        except Exception as e:
+            flash(f'Database Update Failed: {str(e)}', 'danger')
+    else:
+        flash('AI failed to generate enhanced data. Try again.', 'warning')
+
+    return redirect(url_for('admin_dashboard'))
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
