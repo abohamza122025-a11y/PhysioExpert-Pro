@@ -130,7 +130,7 @@ def get_ai_protocol(disease_search):
         data = json.loads(text_response)
         if "error" in data: return None
         return data
-except Exception as e:
+    except Exception as e:
         print(f"❌ AI Error: {e}")  # ده هيطبع السبب في اللوج
         return None
 # ==========================================
