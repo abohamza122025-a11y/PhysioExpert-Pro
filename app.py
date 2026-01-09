@@ -130,8 +130,9 @@ def get_ai_protocol(disease_search):
         data = json.loads(text_response)
         if "error" in data: return None
         return data
-    except: return None
-
+except Exception as e:
+        print(f"❌ AI Error: {e}")  # ده هيطبع السبب في اللوج
+        return None
 # ==========================================
 # 3. المسارات (Routes)
 # ==========================================
@@ -489,5 +490,6 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
