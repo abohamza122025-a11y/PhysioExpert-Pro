@@ -16,15 +16,30 @@ import json
 # إعدادات التطبيق
 # ==========================================
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'physio_expert_final_2026')
 
-# إعدادات الذكاء الاصطناعي
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', "AIzaSyC15GUq00krv1BgDxRo_Xdgz1nA3aUNbQk")
-genai.configure(api_key=GEMINI_API_KEY)
+# استخدام متغير البيئة للمفتاح السري، أو قيمة احتياطية عشوائية للأمان
+app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key_change_in_production')
+
+# ==========================================
+# إعدادات الذكاء الاصطناعي (مؤمنة)
+# ==========================================
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# التحقق من وجود المفتاح قبل تشغيل التطبيق
+if not GEMINI_API_KEY:
+    # هذا التنبيه سيظهر في السجلات (Logs) إذا نسينا وضع المفتاح في Render
+    print("Warning: GEMINI_API_KEY not found in environment variables.")
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
+
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+# ==========================================
 # إعدادات قاعدة البيانات
+# ==========================================
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
+
+# إصلاح مشكلة اسم قاعدة البيانات في Render (postgres vs postgresql)
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
@@ -32,8 +47,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-login_manager = LoginManager(); login_manager.init_app(app); login_manager.login_view = 'login'
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
+# ... هنا يكمل باقي الكود الخاص بالـ Routes والـ Functions ...
 # --- بيانات الموقع الثابتة ---
 @app.context_processor
 def inject_global_vars():
@@ -467,3 +485,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
