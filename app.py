@@ -116,22 +116,52 @@ def admin_required(f):
     return decorated_function
 
 # --- دالة الذكاء الاصطناعي ---
+# --- دالة الذكاء الاصطناعي (النسخة المحسنة والمفصلة) ---
 def get_ai_protocol(disease_search):
     try:
+        # هنا غيرنا الأمر عشان يكون صارم ويطلب تفاصيل كتير
         prompt = f"""
-        Act as an expert Physiotherapist. Create a detailed treatment protocol for "{disease_search}".
-        Return JSON object ONLY. Keys: disease_name, keywords, description, estim_type, estim_params, estim_role, electrode_image, us_type, us_params, us_role, exercises_list, exercises_role, source_ref.
-        If not medical, return JSON with key "error".
+        Act as a Senior Physiotherapist Consultant with 20 years of experience. 
+        Create a HIGHLY DETAILED and COMPREHENSIVE treatment protocol for "{disease_search}".
+        
+        STRICT OUTPUT REQUIREMENTS:
+        1. Description: Provide a deep medical explanation (at least 3 sentences).
+        2. Exercises: You MUST provide at least 5 to 7 different exercises. For each exercise, specify: Name, Sets, Reps, and specific instructions.
+        3. Modalities (Estim/US): Be extremely specific with parameters (Frequency, Intensity, Pulse width, Duty cycle).
+        4. Format: Return a raw JSON object ONLY. No markdown formatting.
+        
+        JSON Keys required: 
+        disease_name, 
+        keywords (comma separated), 
+        description, 
+        estim_type, 
+        estim_params (e.g., 100Hz, 80us, 20min), 
+        estim_role, 
+        electrode_image (keep empty), 
+        us_type, 
+        us_params (e.g., 1.5 W/cm2, 1MHz, 100%), 
+        us_role, 
+        exercises_list (Must be a long detailed string with bullet points for 5-7 exercises), 
+        exercises_role, 
+        source_ref.
+
+        If the input is not a medical condition, return JSON with key "error".
         """
+        
+        # يفضل استخدام gemini-1.5-pro لو النتائج لسه مش عاجباك، بس flash أسرع
         response = model.generate_content(prompt)
         text_response = response.text.strip()
+        
+        # تنظيف الرد
         if text_response.startswith("```json"): text_response = text_response[7:]
         if text_response.endswith("```"): text_response = text_response[:-3]
+        
         data = json.loads(text_response)
         if "error" in data: return None
         return data
+
     except Exception as e:
-        print(f"❌ AI Error: {e}")  # ده هيطبع السبب في اللوج
+        print(f"❌ AI Error: {e}")
         return None
 # ==========================================
 # 3. المسارات (Routes)
@@ -500,6 +530,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
