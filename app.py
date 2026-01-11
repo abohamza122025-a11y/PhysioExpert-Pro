@@ -188,17 +188,27 @@ def home():
         days_left = "Unlimited (Admin)"
 
     result = None
-    search_query = request.args.get('disease') or request.form.get('disease')
+    # 1. استلام الكلمة من المستخدم
+    raw_query = request.args.get('disease') or request.form.get('disease')
     
-    if search_query:
-        term = f"%{search_query}%"
+    if raw_query:
+        # 🧼 خطوة التنظيف الشاملة:
+        # 1. strip: تشيل المسافات من الأول والآخر
+        # 2. split + join: تحول أي مسافات مزدوجة في النص لمسافة واحدة
+        clean_query = " ".join(raw_query.strip().split())
+
+        # 🎯 تجهيز مصطلح البحث (علامة % معناها: هات أي حاجة قبلها أو بعدها)
+        term = f"%{clean_query}%"
+
+        # 🔍 البحث في قاعدة البيانات
         result = Protocol.query.filter(
-            (Protocol.disease_name.ilike(term)) | 
-            (Protocol.keywords.ilike(term))
+            (Protocol.disease_name.ilike(term)) |  # يبحث في الاسم
+            (Protocol.keywords.ilike(term))        # يبحث في الكلمات الدلالية
         ).first()
 
+        # 🤖 لو ملقاش في الداتابيز، يسأل الذكاء الاصطناعي بالكلمة النظيفة
         if not result:
-            result = get_ai_protocol(search_query)
+            result = get_ai_protocol(clean_query)
     
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
 
@@ -490,6 +500,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
