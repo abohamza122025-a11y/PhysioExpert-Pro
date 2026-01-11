@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
    <style>
-        /* 1. ضبط الصفحة الأساسي */
+        /* تنسيقات الصفحة العامة */
         body { 
             font-family: 'Poppins', sans-serif; 
             background-color: #f8f9fa; 
@@ -19,7 +19,7 @@
             min-height: 100vh;
         }
         
-        /* 2. الجزء العلوي الملون */
+        /* الهيرو سكشن (الجزء الأزرق) */
         .hero-section { 
             background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
             color: white; 
@@ -29,7 +29,7 @@
             text-align: center;
         }
 
-        /* 3. صندوق البحث */
+        /* كارت البحث */
         .search-card {
             background-color: white;
             width: 90%;
@@ -54,12 +54,15 @@
             border-color: #0d6efd;
         }
 
-        /* 4. تنسيق المحتوى الطبي الجديد (هام جداً) */
+        /* =========================================
+           تنسيق المحتوى الطبي (التمارين والملاحظات)
+           ========================================= */
         .protocol-content {
             font-size: 1rem;
             color: #333;
         }
         
+        /* عناوين المراحل (Phase 1, Phase 2...) */
         .protocol-content h4 {
             color: #0d6efd;
             font-weight: 700;
@@ -70,48 +73,63 @@
             font-size: 1.2rem;
         }
 
+        /* قوائم التمارين */
         .protocol-content ul {
-            list-style: none;
+            list-style: none; /* إخفاء النقاط العادية */
             padding-left: 0;
         }
 
+        /* عنصر التمرين الواحد */
         .protocol-content li {
             position: relative;
-            padding-left: 30px;
+            padding-left: 35px;
             margin-bottom: 12px;
             line-height: 1.6;
             background-color: #fff;
-            padding: 10px 10px 10px 35px;
+            padding: 12px 15px 12px 35px;
             border-radius: 8px;
-            border-left: 4px solid #0dcaf0;
+            border-left: 4px solid #0dcaf0; /* خط ملون على اليسار */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
+        /* علامة صح ✔️ بجانب كل تمرين */
         .protocol-content li::before {
-            content: "\f00c"; /* FontAwesome Check Icon */
+            content: "\f00c"; /* رمز الصح من FontAwesome */
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
             position: absolute;
-            left: 10px;
-            top: 12px;
+            left: 12px;
+            top: 14px;
             color: #198754;
         }
 
+        /* اسم التمرين بالخط العريض */
         .protocol-content b {
             color: #2c3e50;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 1.05em;
+            display: block; /* يجعله في سطر منفصل */
+            margin-bottom: 4px;
         }
 
+        /* الجرعة (Dosage) */
         .protocol-content i {
             display: block;
             color: #6c757d;
             font-size: 0.9em;
-            margin-top: 4px;
+            margin-top: 6px;
             font-style: normal;
             background-color: #f8f9fa;
             padding: 2px 8px;
             border-radius: 4px;
             width: fit-content;
+            border: 1px solid #e9ecef;
+        }
+
+        /* تنسيق الملاحظات الطبية لكي تحترم الأسطر */
+        .notes-content {
+            white-space: pre-wrap; /* هذا السطر هو السر في ترتيب الملاحظات */
+            line-height: 1.8;
         }
 
         footer {
@@ -125,11 +143,20 @@
     </style>
 
     <style>
+        /* تنسيقات الطباعة */
         @media print {
             .no-print, .navbar, footer, .alert, .hero-section, form { display: none !important; }
             .card { border: none !important; box-shadow: none !important; }
-            .container { margin-top: 0 !important; }
+            .container { margin-top: 0 !important; max-width: 100% !important; }
             .protocol-content li { page-break-inside: avoid; border: 1px solid #eee; }
+            body::before {
+                content: "Physio Expert Pro - Clinical Protocol";
+                display: block;
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }
         }
 
         {% if not (current_user.can_print or current_user.is_admin) %}
@@ -138,8 +165,9 @@
         }
         {% endif %}
     </style>
-    </head>
+</head>
 <body class="bg-light d-flex flex-column min-vh-100">
+
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3">
   <div class="container">
     <a class="navbar-brand fw-bold text-primary fs-4" href="/">
@@ -194,7 +222,7 @@
     
     <div class="mb-5">
         
-        <div class="card-custom p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 position-relative">
+        <div class="card-custom p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 position-relative bg-white rounded shadow-sm border">
             <div style="flex: 1;">
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill mb-2">Protocol Result</span>
                 <h2 class="fw-bold text-dark mb-0 display-6">{{ result.disease_name }}</h2>
@@ -212,35 +240,7 @@
             </div>
         </div>
         
-        <style>
-            @media print {
-                .navbar, .hero-section, footer, .no-print-btn, form, .alert { display: none !important; }
-                body { background-color: white; margin: 0; padding: 0; }
-                .container { margin-top: 0 !important; width: 100% !important; max-width: 100% !important; }
-                .card-custom, .mint-table-container, .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
-                
-                body::before {
-                    content: "Physio Expert Pro - Clinical Protocol";
-                    display: block;
-                    text-align: center;
-                    font-size: 24px;
-                    font-weight: bold;
-                    color: #0d6efd;
-                    margin-bottom: 10px;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #eee;
-                }
-                
-                h2 { color: #000 !important; }
-                .badge { border: 1px solid #000 !important; color: #000 !important; background: none !important; }
-                
-                /* تحسين الطباعة للقوائم الجديدة */
-                .protocol-content h4 { color: #000 !important; border-bottom: 1px solid #000 !important; }
-                .protocol-content li { page-break-inside: avoid; }
-            }
-        </style>
-        
-        <div class="mint-table-container shadow-sm mb-5">
+        <div class="mint-table-container shadow-sm mb-5 bg-white rounded overflow-hidden border">
             <div class="text-white p-3 ps-4 fw-bold d-flex align-items-center" style="background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
                 <i class="fas fa-notes-medical me-2 fs-5"></i> Clinical Presentation & Definition
             </div>
@@ -252,7 +252,7 @@
         <div class="row g-4 mb-5 align-items-stretch">
             
             <div class="col-md-6">
-                <div class="card-custom h-100 p-4 border-start border-5 border-primary">
+                <div class="card-custom h-100 p-4 border-start border-5 border-primary bg-white rounded shadow-sm">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3 text-primary d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
                             <i class="fas fa-bolt fa-lg"></i>
@@ -268,12 +268,12 @@
                         <p class="mb-0 text-dark small">{{ result.estim_params }}</p>
                     </div>
                     <div class="text-center my-3 p-2 border rounded bg-white">
-                         <h6 class="text-primary fw-bold mb-2" style="font-size: 0.8rem;">Electrode Placement Guide</h6>
+                         <h6 class="text-primary fw-bold mb-2" style="font-size: 0.8rem;">Placement Guide</h6>
                          {% if result.electrode_image %}
                             {% if 'data:image' in result.electrode_image %}
                                 <img src="{{ result.electrode_image }}" class="img-fluid rounded border shadow-sm" style="max-height: 150px;">
                             {% else %}
-                                <img src="{{ url_for('static', filename=result.Electrode_image) }}" 
+                                <img src="{{ url_for('static', filename=result.electrode_image) }}" 
                                      class="img-fluid rounded border shadow-sm" style="max-height: 150px;" 
                                      onerror="this.parentElement.innerHTML='<span class=\'text-muted small\'>Image Not Found</span>';">
                             {% endif %}
@@ -286,7 +286,7 @@
             </div>
 
             <div class="col-md-6">
-                <div class="card-custom h-100 p-4 border-start border-5 border-success">
+                <div class="card-custom h-100 p-4 border-start border-5 border-success bg-white rounded shadow-sm">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3 text-success d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
                             <i class="fas fa-wave-square fa-lg"></i>
@@ -305,7 +305,8 @@
                 </div>
             </div>
         </div>
-            <div class="row mb-4">
+
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card h-100 border-0 shadow-sm" style="background-color: #f0f8ff; border-radius: 15px;">
                     <div class="card-header text-white fw-bold py-3" style="border-radius: 15px 15px 0 0; background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
@@ -330,7 +331,7 @@
                  {% if result.notes %}
                 <div class="alert alert-warning shadow-sm border-start border-warning border-5" role="alert">
                     <h5 class="alert-heading fw-bold"><i class="fas fa-sticky-note me-2"></i> Specialist Notes:</h5>
-                    <p class="mb-0" style="white-space: pre-wrap;">{{ result.notes }}</p>
+                    <p class="mb-0 notes-content">{{ result.notes }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -345,20 +346,16 @@
 
         <div class="text-center mt-4 no-print">
             {% if current_user.is_authenticated and (current_user.can_print or current_user.is_admin) %}
-                
                 <button onclick="window.print()" class="btn btn-primary btn-lg shadow rounded-pill px-4">
                     <i class="fas fa-print me-2"></i> Print Protocol
                 </button>
-
             {% else %}
-                
                 <button class="btn btn-secondary rounded-pill px-4" disabled title="Printing is disabled for your account">
                     <i class="fas fa-lock me-2"></i> Print Locked
                 </button>
                 {% if not current_user.is_authenticated %}
                     <p class="small text-muted mt-2">Please <a href="/login">login</a> to print.</p>
                 {% endif %}
-
             {% endif %}
         </div>
         
