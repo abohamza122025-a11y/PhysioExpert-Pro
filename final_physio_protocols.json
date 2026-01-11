@@ -2472,5 +2472,102 @@
       "precautions": "Monitor vital signs, especially for orthostatic hypotension, which is common. Be aware of medication timing ('on'/'off' periods) and schedule therapy during 'on' periods for optimal patient performance and safety. Watch for fatigue, dyskinesias, and dystonia, adjusting intensity and duration accordingly. Ensure a safe environment to prevent falls, especially during balance and gait training; use assistive devices as needed. Educate on 'freezing of gait' and external cueing strategies. Educate patients and caregivers on fall prevention, home modifications, and energy conservation techniques. Avoid exercises that significantly increase fall risk without adequate supervision or assistive devices. Consider cognitive status when providing instructions, using clear, concise language and demonstrations."
     },
     "scientific_reference": "Keus, S. H. J., Bloem, B. R., Hendriks, E. J. M., Bredero-Cohen, A. B., & Munneke, M. (2014). European Physiotherapy Guideline for Parkinson's Disease. KNGF guidelines for physical therapy in patients with Parkinson's disease. Amersfoort: Royal Dutch Society for Physical Therapy."
+  },
+  {
+    "condition_name": "Cerebral Palsy (Spastic)",
+    "category": "Pediatrics",
+    "clinical_presentation": {
+      "definition": "Cerebral Palsy (Spastic) is a permanent, non-progressive neurological condition resulting from a lesion or anomaly in the developing brain, characterized primarily by increased muscle tone (hypertonia) due to damage to the motor cortex or pyramidal tracts. This leads to exaggerated deep tendon reflexes, clonus, and sustained muscle contractions, significantly impacting posture, movement, and functional ability. Spasticity can manifest as hemiplegia (one side of the body), diplegia (predominantly lower limbs), or quadriplegia (all four limbs), often accompanied by secondary musculoskeletal deformities like contractures and scoliosis. Functional limitations vary widely based on the severity and distribution of spasticity.",
+      "image_description": "A child with spastic diplegia, standing with scissoring gait, knees adducted and internally rotated, ankles in plantarflexion, demonstrating toe walking. Upper limbs might show mild flexor posturing."
+    },
+    "electrotherapy": [
+      {
+        "type": "Neuromuscular Electrical Stimulation (NMES)",
+        "parameters": "Frequency: 30-50 Hz (for muscle strengthening/re-education). Pulse Duration: 200-300 µs. Intensity: To achieve a comfortable, yet visible motor contraction without causing pain or significant spasticity exacerbation. Ramp Up/Down: 1-2 seconds. On/Off Cycle: 1:3 to 1:5 ratio (e.g., 5-10 sec ON, 15-50 sec OFF). Treatment Duration: 15-20 minutes, 3-5 times per week.",
+        "placement_guide": "Place electrodes on the muscle belly and distal tendon of weak antagonist muscles (e.g., tibialis anterior for ankle dorsiflexion to counteract plantarflexor spasticity, triceps for elbow extension against biceps spasticity) or on weak agonist muscles to facilitate activation and strengthening for functional tasks.",
+        "goal": "To strengthen weak antagonist muscles to improve motor control and reduce co-contraction from spastic agonists, facilitate motor learning, improve functional movement patterns (e.g., dorsiflexion during gait), and prevent disuse atrophy.",
+        "image_description": "Two electrodes are placed on the anterior aspect of a child's lower leg, specifically targeting the tibialis anterior muscle, with a clear motor response visible (dorsiflexion of the foot)."
+      }
+    ],
+    "therapeutic_exercises": {
+      "phase_1": {
+        "name": "Foundational Mobility & Tone Management (Early Intervention / Severe Involvement)",
+        "goal": "Promote early motor development, manage tone, prevent secondary deformities (contractures), improve body awareness, and facilitate basic functional movements.",
+        "exercises": [
+          {
+            "name": "Gentle Sustained Stretching & Range of Motion (ROM)",
+            "instructions": "Slowly move affected joints through their available pain-free range, holding at end-range for 30-60 seconds. Focus on muscles commonly affected by spasticity: hip adductors, hamstrings, gastrocnemius-soleus, hip flexors, pectoralis major, biceps, wrist/finger flexors. Perform multiple repetitions.",
+            "dosage": "5-10 repetitions per muscle group, holding 30-60 seconds, 2-3 times daily.",
+            "image_description": "A therapist gently holding a child's knee extended and ankle dorsiflexed to stretch the gastrocnemius, with a calm and reassuring expression."
+          },
+          {
+            "name": "Positioning for Tone Inhibition & Postural Control",
+            "instructions": "Utilize various positions to inhibit abnormal tone and encourage normal movement. Examples include prone lying, side lying, ring sitting, tailor sitting, prone over a wedge. Use supportive devices (rolls, wedges, pillows) as needed to maintain alignment and reduce spasticity. Encourage midline activities and weight-bearing through appropriate joints.",
+            "dosage": "Multiple short sessions throughout the day, aiming for a total of 2-4 hours in various positions.",
+            "image_description": "A child positioned in side-lying with a pillow between their knees and behind their back, promoting hip abduction and trunk alignment, reaching for a toy."
+          },
+          {
+            "name": "Rolling & Bridging Facilitation",
+            "instructions": "Assist the child in initiating and completing rolling (prone to supine, supine to prone) using tactile cues and gentle guiding. Facilitate bridging to activate gluteal and core muscles. Use toys to encourage head turning and reaching across the body to initiate rolls.",
+            "dosage": "5-10 repetitions of each, 2-3 times daily, focusing on quality of movement.",
+            "image_description": "A therapist providing gentle support at the hip and shoulder to guide a child through a segmental rolling motion from supine to side-lying."
+          }
+        ]
+      },
+      "phase_2": {
+        "name": "Functional Skill Acquisition & Strengthening (Moderate Involvement)",
+        "goal": "Improve functional strength, balance, coordination, and independent mobility (e.g., sitting, crawling, standing, walking) through targeted exercises and task-specific training.",
+        "exercises": [
+          {
+            "name": "Weight-Bearing Activities & Transitions",
+            "instructions": "Facilitate weight-bearing in developmental positions: quadruped, kneeling, half-kneeling, modified plantigrade, and standing with support (e.g., standing frame, parallel bars, therapist assist). Practice transitions between these positions (e.g., sit-to-stand, floor-to-stand).",
+            "dosage": "5-10 repetitions of transitions; 15-30 minutes in standing frame/supported standing, 2-3 times daily.",
+            "image_description": "A child in a standing frame with pelvic and trunk support, reaching for a toy on a tray, demonstrating active engagement and weight-bearing through the legs."
+          },
+          {
+            "name": "Targeted Strengthening (Antagonist Muscles)",
+            "instructions": "Incorporate playful exercises to strengthen weak muscles, particularly antagonists to spastic muscles. Examples: kicking a ball (hip flexors), pulling resistance bands (shoulder retractors), 'animal walks' (quadruped crawling for hip/shoulder stability), resisted dorsiflexion with therapeutic putty or bands.",
+            "dosage": "3 sets of 8-12 repetitions or sustained holds during play, 3-4 times per week.",
+            "image_description": "A child lying supine, pushing a lightweight ball away with their feet to strengthen hip flexors and quadriceps."
+          },
+          {
+            "name": "Balance Training (Static & Dynamic)",
+            "instructions": "Progress from static balance (e.g., unsupported sitting, kneeling, standing with minimal support) to dynamic balance (e.g., reaching outside base of support, walking on varied surfaces, tandem stance with assist, single-leg stance with hand-holding). Use balance boards, wobble cushions, and games.",
+            "dosage": "10-15 minutes, 3-5 times per week, incorporated into play.",
+            "image_description": "A child standing on a soft, unstable surface (e.g., foam mat or wobble board) with a therapist providing light hand assistance, maintaining balance while reaching for a toy."
+          }
+        ]
+      },
+      "phase_3": {
+        "name": "Advanced Motor Control & Community Participation (Mild Involvement / Older Children)",
+        "goal": "Refine motor skills, improve endurance, promote independence in daily activities, and facilitate participation in age-appropriate recreational and community activities.",
+        "exercises": [
+          {
+            "name": "Gait Training & Locomotion Refinement",
+            "instructions": "Focus on improving gait parameters: step length, cadence, velocity, symmetry. Incorporate obstacle courses, walking on uneven terrain, stair climbing (with or without railing), and treadmill training (with body weight support if needed). Practice dual-tasking during ambulation.",
+            "dosage": "20-30 minutes, 3-5 times per week.",
+            "image_description": "A child walking independently on a slightly uneven outdoor path, demonstrating good step length and arm swing, supervised by a therapist."
+          },
+          {
+            "name": "Endurance Training",
+            "instructions": "Engage in activities that improve cardiovascular fitness and muscular endurance: cycling (stationary bike or adapted bike), swimming, prolonged walking, active sports participation. Monitor fatigue and adjust intensity.",
+            "dosage": "20-30 minutes of moderate intensity, 3-4 times per week.",
+            "image_description": "A child happily riding an adapted stationary bicycle, demonstrating controlled leg movements and sustained effort."
+          },
+          {
+            "name": "Sport-Specific & Recreational Skill Development",
+            "instructions": "Tailor exercises to specific interests, such as adapted sports (e.g., boccia, swimming, seated volleyball), throwing/catching games, agility drills, jumping activities (if appropriate), or participation in community programs. Emphasize functional and social participation.",
+            "dosage": "Regular participation as per child's interest, aiming for at least 30-60 minutes, 3-5 times per week.",
+            "image_description": "A group of children, one with mild CP, participating in a modified team ball game in a gymnasium, demonstrating active and joyful engagement."
+          }
+        ]
+      }
+    },
+    "clinical_notes": {
+      "assessment_diagnosis": "Comprehensive assessment includes: detailed history (birth, developmental milestones), Gross Motor Function Classification System (GMFCS), Manual Ability Classification System (MACS), Communication Function Classification System (CFCS), Modified Ashworth Scale for spasticity, Range of Motion (ROM), muscle strength testing, postural control assessment (sitting, standing balance), gait analysis (observational or instrumental), functional mobility assessment (e.g., Pediatric Evaluation of Disability Inventory - PEDI), assessment of pain, fatigue, and orthotic/assistive device needs. Collaborate with multidisciplinary team (pediatrician, neurologist, orthopedist, occupational therapist, speech pathologist).",
+      "manual_therapy": "Gentle, sustained stretches to address muscle shortening and contractures. Neurodevelopmental Treatment (NDT) handling techniques to facilitate normal movement patterns, inhibit abnormal tone, and promote postural control. Joint mobilization may be indicated for specific joint hypomobility not directly due to spasticity. Soft tissue mobilization for myofascial tightness. Proprioceptive Neuromuscular Facilitation (PNF) patterns can be adapted to improve motor control and strength.",
+      "precautions": "Avoid rapid, ballistic stretching as it can exacerbate the stretch reflex and increase spasticity. Monitor for signs of pain, discomfort, or fatigue. Consider respiratory status and potential for autonomic dysregulation in severe cases. Be aware of seizure disorders and implement appropriate precautions. Ensure proper fit and use of orthoses to prevent skin breakdown. Tailor intensity and duration of exercises to the child's tolerance and developmental stage. Watch for signs of over-exertion or heat intolerance. Always prioritize child safety and comfort."
+    },
+    "scientific_reference": "Kisner, C., & Colby, L. A. (2017). Therapeutic Exercise: Foundations and Techniques (7th ed.). F.A. Davis Company. (Chapter on Neuromuscular Disorders/Pediatrics)"
   }
 ]
