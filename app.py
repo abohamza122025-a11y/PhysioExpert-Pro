@@ -376,31 +376,80 @@ def export_data():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+import pandas as pd # تأكد إن المكتبة دي معمولة import فوق
+
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
     if 'excel_file' not in request.files:
-        flash('No file selected', 'danger'); return redirect(url_for('admin_dashboard'))
+        flash('No file selected', 'danger')
+        return redirect(url_for('admin_dashboard'))
     
     file = request.files['excel_file']
     if file.filename == '':
-        flash('No selected file', 'warning'); return redirect(url_for('admin_dashboard'))
+        flash('No selected file', 'warning')
+        return redirect(url_for('admin_dashboard'))
 
     try:
         df = pd.read_excel(file)
-        df.columns = df.columns.str.strip()
+        # تنظيف أسماء الأعمدة في الإكسيل (شيل المسافات)
+        df.columns = df.columns.str.strip() 
+
+        # دالة مساعدة صغيرة عشان لو الخانة فاضية مترجعش كلمة "nan"
+        def get_val(row, col_name):
+            val = row.get(col_name)
+            # لو القيمة فاضية أو nan رجع نص فاضي، غير كده رجع النص نضيف
+            return "" if pd.isna(val) else str(val).strip()
+
+        updated_count = 0
+        created_count = 0
+
         for _, row in df.iterrows():
-            new_p = Protocol(
-                disease_name=str(row.get('disease_name', 'Unknown')),
-                category=str(row.get('category', 'General')),
-                description=str(row.get('description', '')),
-                notes=str(row.get('notes', ''))
-            )
-            db.session.add(new_p)
+            # 1. أهم حاجة الاسم عشان نعرف المرض ده موجود ولا لأ
+            d_name = get_val(row, 'disease_name') # لازم العمود في الإكسيل يبقى اسمه disease_name
+            if not d_name: 
+                continue # لو مفيش اسم، فوت السطر ده
+
+            # 2. البحث عن البروتوكول
+            p = Protocol.query.filter_by(disease_name=d_name).first()
+            
+            if not p:
+                # لو مش موجود -> أنشئ جديد
+                p = Protocol(disease_name=d_name)
+                db.session.add(p)
+                created_count += 1
+            else:
+                updated_count += 1
+
+            # 3. تحديث كل البيانات (بما فيها الجديد)
+            # ركز إن الأسماء هنا (اللي بين القوسين) لازم تطابق عناوين الأعمدة في ملف الإكسيل
+            p.category = get_val(row, 'category') or 'General'
+            p.keywords = get_val(row, 'keywords')
+            p.description = get_val(row, 'description')
+            
+            p.estim_type = get_val(row, 'estim_type')
+            p.estim_params = get_val(row, 'estim_params')
+            p.estim_role = get_val(row, 'estim_role')
+            
+            p.us_type = get_val(row, 'us_type')
+            p.us_params = get_val(row, 'us_params')
+            p.us_role = get_val(row, 'us_role')
+            
+            p.exercises_list = get_val(row, 'exercises_list')
+            p.exercises_role = get_val(row, 'exercises_role')
+            p.source_ref = get_val(row, 'source_ref')
+
+            # الخانات الجديدة
+            p.video_link = get_val(row, 'video_link')
+            p.notes = get_val(row, 'notes')
+
         db.session.commit()
-        flash(f'Imported {len(df)} protocols!', 'success')
+        flash(f'Success! Created {created_count} new, Updated {updated_count} existing protocols.', 'success')
+
     except Exception as e:
         db.session.rollback()
+        # طباعة الخطأ في اللوج عشان نعرف السبب لو حصلت مشكلة
+        print(f"❌ Excel Import Error: {e}")
         flash(f'Excel Error: {str(e)}', 'danger')
         
     return redirect(url_for('admin_dashboard'))
@@ -540,6 +589,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
