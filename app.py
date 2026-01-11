@@ -117,46 +117,55 @@ def admin_required(f):
 
 # --- دالة الذكاء الاصطناعي ---
 # --- دالة الذكاء الاصطناعي (النسخة المحسنة والمفصلة) ---
+# --- دالة الذكاء الاصطناعي (نسخة الاستشاري - Pro) ---
 def get_ai_protocol(disease_search):
     try:
-        # هنا غيرنا الأمر عشان يكون صارم ويطلب تفاصيل كتير
+        # إعدادات لزيادة طول الإجابة وسماحية الإبداع
+        # max_output_tokens=3000: يسمح بكتابة مقال طويل جداً
+        # temperature=0.7: يجعل التمارين متنوعة وليست محفوظة
+        config = genai.types.GenerationConfig(
+            temperature=0.7,
+            max_output_tokens=3000
+        )
+
         prompt = f"""
         Act as a Senior Physiotherapist Consultant with 20 years of experience. 
-        Create a HIGHLY DETAILED and COMPREHENSIVE treatment protocol for "{disease_search}".
-        
-        STRICT OUTPUT REQUIREMENTS:
-        1. Description: Provide a deep medical explanation (at least 3 sentences).
-        2. Exercises: You MUST provide at least 5 to 7 different exercises. For each exercise, specify: Name, Sets, Reps, and specific instructions.
-        3. Modalities (Estim/US): Be extremely specific with parameters (Frequency, Intensity, Pulse width, Duty cycle).
-        4. Format: Return a raw JSON object ONLY. No markdown formatting.
-        
-        JSON Keys required: 
-        disease_name, 
-        keywords (comma separated), 
-        description, 
-        estim_type, 
-        estim_params (e.g., 100Hz, 80us, 20min), 
-        estim_role, 
-        electrode_image (keep empty), 
-        us_type, 
-        us_params (e.g., 1.5 W/cm2, 1MHz, 100%), 
-        us_role, 
-        exercises_list (Must be a long detailed string with bullet points for 5-7 exercises), 
-        exercises_role, 
-        source_ref.
+        Create a HIGHLY DETAILED Treatment Protocol for: "{disease_search}".
 
-        If the input is not a medical condition, return JSON with key "error".
+        CRITICAL INSTRUCTIONS:
+        1. DO NOT Summarize. Be verbose and detailed.
+        2. Exercises: You MUST provide 6 to 8 distinct exercises.
+        3. For EACH exercise, format it exactly like this:
+           - <b>Exercise Name</b><br>
+           - Sets: [Number] | Reps: [Number]<br>
+           - Instructions: [Detailed how-to]<br><br>
+        4. Modalities: Be specific (Hz, us, W/cm2).
+
+        OUTPUT FORMAT: Return a raw JSON object ONLY.
+        Keys required: 
+        "disease_name", 
+        "keywords" (comma separated string), 
+        "description" (detailed paragraph), 
+        "estim_type", "estim_params", "estim_role", 
+        "us_type", "us_params", "us_role", 
+        "exercises_list" (This must be a single String containing all exercises formatted with HTML tags <br> and <b> as requested above), 
+        "exercises_role", 
+        "source_ref",
+        "video_link" (return null or empty string),
+        "electrode_image" (return null or empty string).
+
+        If input is not medical, return JSON with key "error".
         """
         
-        # يفضل استخدام gemini-1.5-pro لو النتائج لسه مش عاجباك، بس flash أسرع
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, generation_config=config)
         text_response = response.text.strip()
         
-        # تنظيف الرد
+        # تنظيف الرد من علامات الـ Markdown
         if text_response.startswith("```json"): text_response = text_response[7:]
         if text_response.endswith("```"): text_response = text_response[:-3]
         
         data = json.loads(text_response)
+        
         if "error" in data: return None
         return data
 
@@ -322,7 +331,8 @@ def edit_protocol(id):
         p.source_ref = request.form.get('source_ref')
         p.video_link = request.form.get('video_link')
         p.notes = request.form.get('notes')
-
+        p.video_link = request.form.get('video_link')
+        p.notes = request.form.get('notes')  # ده السطر اللي بيحفظ الملاحظات 
         if 'electrode_image' in request.files:
             file = request.files['electrode_image']
             if file and file.filename != '':
@@ -530,6 +540,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
