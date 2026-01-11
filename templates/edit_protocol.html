@@ -79,8 +79,8 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Exercises List</label>
-                            <input type="text" name="exercises_list" class="form-control" value="{{ protocol.exercises_list }}">
+                            <label class="form-label">Exercises List (HTML Allowed)</label>
+                            <textarea name="exercises_list" class="form-control" rows="6">{{ protocol.exercises_list }}</textarea>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Exercises Role</label>
@@ -89,6 +89,16 @@
                         <div class="col-md-6">
                             <label class="form-label">Scientific Reference</label>
                             <input type="text" name="source_ref" class="form-control" value="{{ protocol.source_ref }}">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label for="video_link" class="form-label">Video Link (YouTube)</label>
+                            <input type="text" class="form-control" name="video_link" value="{{ protocol.video_link or '' }}">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label for="notes" class="form-label">Notes / Clinical Tips</label>
+                            <textarea class="form-control" name="notes" rows="3">{{ protocol.notes or '' }}</textarea>
                         </div>
 
                         <div class="col-12 mt-4">
@@ -107,7 +117,7 @@
                         </div>
                     </div>
                 </form>
-            </div>
+                </div>
         </div>
     </div>
 </div>
