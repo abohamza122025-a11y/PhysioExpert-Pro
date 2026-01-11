@@ -16,37 +16,36 @@
             margin: 0;
             display: flex;
             flex-direction: column;
-            min-height: 100vh; /* يضمن أن الفوتر في الأسفل دائماً */
+            min-height: 100vh;
         }
         
-        /* 2. الجزء العلوي الملون (Hero Section) */
+        /* 2. الجزء العلوي الملون */
         .hero-section { 
             background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
             color: white; 
-            padding: 60px 20px 100px; /* زودنا المسافة تحت عشان الصندوق يتداخل معاها */
+            padding: 60px 20px 100px;
             border-radius: 0 0 40px 40px;
             box-shadow: 0 10px 30px rgba(13, 110, 253, 0.15);
             text-align: center;
         }
 
-        /* 3. الصندوق الأبيض (السحر كله هنا) */
+        /* 3. صندوق البحث */
         .search-card {
             background-color: white;
-            width: 90%;         /* للموبايل: ياخد 90% من الشاشة */
-            max-width: 600px;   /* للكمبيوتر: يقف عند 600 بكسل */
-            margin: -60px auto 30px; /* يرفع الصندوق لفوق 60 بكسل ليتداخل مع الخلفية */
+            width: 90%;
+            max-width: 600px;
+            margin: -60px auto 30px;
             padding: 30px;
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1); /* ظل ناعم */
-            position: relative; /* عشان يظهر فوق الخلفية */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            position: relative;
         }
 
-        /* 4. تحسين شكل الخانات للموبايل */
         .form-control {
             padding: 12px 15px;
             border-radius: 12px;
             border: 1px solid #e0e0e0;
-            font-size: 16px; /* خط واضح للموبايل */
+            font-size: 16px;
             margin-bottom: 15px;
         }
 
@@ -55,20 +54,68 @@
             border-color: #0d6efd;
         }
 
-        /* 5. زرار البحث */
-        .btn-primary {
-            width: 100%; /* الزرار بعرض الصندوق */
-            padding: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            border: none;
+        /* 4. تنسيق المحتوى الطبي الجديد (هام جداً) */
+        .protocol-content {
+            font-size: 1rem;
+            color: #333;
+        }
+        
+        .protocol-content h4 {
+            color: #0d6efd;
+            font-weight: 700;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 1.2rem;
         }
 
-        /* 6. الفوتر */
+        .protocol-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .protocol-content li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            background-color: #fff;
+            padding: 10px 10px 10px 35px;
+            border-radius: 8px;
+            border-left: 4px solid #0dcaf0;
+        }
+
+        .protocol-content li::before {
+            content: "\f00c"; /* FontAwesome Check Icon */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 10px;
+            top: 12px;
+            color: #198754;
+        }
+
+        .protocol-content b {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .protocol-content i {
+            display: block;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 4px;
+            font-style: normal;
+            background-color: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
         footer {
-            margin-top: auto; /* يزق الفوتر لتحت */
+            margin-top: auto;
             background: white;
             padding: 20px;
             text-align: center;
@@ -78,14 +125,13 @@
     </style>
 
     <style>
-        /* هذا الجزء يخفي الأزرار والقوائم عند الطباعة لتخرج الورقة نظيفة */
         @media print {
             .no-print, .navbar, footer, .alert, .hero-section, form { display: none !important; }
             .card { border: none !important; box-shadow: none !important; }
             .container { margin-top: 0 !important; }
+            .protocol-content li { page-break-inside: avoid; border: 1px solid #eee; }
         }
 
-        /* هذا الجزء يمنع الطباعة (تخرج ورقة بيضاء) إذا لم يكن لدى المستخدم إذن */
         {% if not (current_user.can_print or current_user.is_admin) %}
         @media print {
             body { display: none !important; }
@@ -133,12 +179,11 @@
         <div class="row justify-content-center">
             <div class="col-md-15 col-lg-8">
                 <form action="/" method="POST" class="position-relative">
-    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="e.g. ACL, Stroke..." required style="font-size: 1rem; padding-right: 120px !important;">
-
-    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
-        <i class="fas fa-search me-2"></i> Search
-    </button>
-</form>
+                    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="e.g. ACL, Stroke..." required style="font-size: 1rem; padding-right: 120px !important;">
+                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
+                        <i class="fas fa-search me-2"></i> Search
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -156,9 +201,9 @@
             </div>
             
             <div class="d-flex align-items-center gap-2">
-<span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fs-6">
-    {{ (result.keywords or 'General').split(',')[0] }}
-</span>                
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fs-6">
+                    {{ (result.keywords or 'General').split(',')[0] }}
+                </span>                
                 {% if current_user.is_admin or current_user.can_print %}
                     <button onclick="window.print()" class="btn btn-danger rounded-pill px-3 py-2 shadow-sm no-print-btn d-flex align-items-center">
                         <i class="fas fa-file-pdf me-2"></i> Print
@@ -174,7 +219,6 @@
                 .container { margin-top: 0 !important; width: 100% !important; max-width: 100% !important; }
                 .card-custom, .mint-table-container, .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
                 
-                
                 body::before {
                     content: "Physio Expert Pro - Clinical Protocol";
                     display: block;
@@ -187,9 +231,12 @@
                     border-bottom: 2px solid #eee;
                 }
                 
-                
                 h2 { color: #000 !important; }
                 .badge { border: 1px solid #000 !important; color: #000 !important; background: none !important; }
+                
+                /* تحسين الطباعة للقوائم الجديدة */
+                .protocol-content h4 { color: #000 !important; border-bottom: 1px solid #000 !important; }
+                .protocol-content li { page-break-inside: avoid; }
             }
         </style>
         
@@ -199,8 +246,6 @@
             </div>
             <div class="p-4 text-dark" style="font-size: 1.1rem; line-height: 1.7; color: #052c65;">
                 {{ result.description }}
-            </div>
-        </div>
             </div>
         </div>
 
@@ -260,7 +305,7 @@
                 </div>
             </div>
         </div>
-        <div class="row mb-4">
+            <div class="row mb-4">
             <div class="col-12">
                 <div class="card h-100 border-0 shadow-sm" style="background-color: #f0f8ff; border-radius: 15px;">
                     <div class="card-header text-white fw-bold py-3" style="border-radius: 15px 15px 0 0; background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
@@ -268,19 +313,9 @@
                     </div>
                     
                     <div class="card-body p-4">
-                        <div class="list-group list-group-flush bg-transparent">
-                            {% for exercise in result.exercises_list | split_list %}
-                            <div class="list-group-item bg-transparent border-0 d-flex align-items-center exercise-item p-2">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 28px; height: 28px; flex-shrink: 0;">
-                                    <i class="fas fa-check fa-xs"></i>
-                                </div>
-                                <span class="fs-5 text-dark">{{ exercise }}</span>
-                            </div>
-                            {% else %}
-                            <p class="text-muted">No specific exercises listed for this protocol.</p>
-                            {% endfor %}
+                        <div class="protocol-content">
+                             {{ result.exercises_list | safe }}
                         </div>
-                        
                         <div class="mt-4 p-3 bg-white border-start border-primary border-4 rounded shadow-sm">
                             <h6 class="fw-bold text-primary"><i class="fas fa-bullseye me-2"></i> Exercise Goal:</h6>
                             <p class="mb-0">{{ result.exercises_role }}</p>
@@ -326,7 +361,8 @@
 
             {% endif %}
         </div>
-        </div>
+        
+    </div>
     {% elif request.method == 'POST' %}
         <div class="text-center py-5">
             <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
@@ -336,8 +372,10 @@
             <p class="text-muted">Try searching for keywords like "Knee", "Shoulder", or "Stroke".</p>
         </div>
     {% endif %}
+</div>
 
-<footer class="text-center text-muted mt-auto mb-0 pt-5 pb-4 border-top">    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> Disclaimer: For educational purposes only.</p>
+<footer class="text-center text-muted mt-auto mb-0 pt-5 pb-4 border-top">
+    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> Disclaimer: For educational purposes only.</p>
     <p class="small">Support: <a href="mailto:support@physioexpert.pro" class="text-decoration-none fw-bold text-cyan-theme">support@physioexpert.pro</a></p>
     <p class="mb-1 fw-bold text-cyan-theme">© 2026 Physio Expert Pro</p>
 </footer>
@@ -345,4 +383,3 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
