@@ -493,7 +493,76 @@ def register():
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))
+@app.route('/admin/update-content')
+@admin_required
+def update_content():
+    try:
+        file_path = os.path.join(app.root_path, 'final_physio_protocols.json')
+        
+        if not os.path.exists(file_path):
+            return "<h1>❌ Error: File not found. Push 'final_physio_protocols.json' to GitHub first.</h1>"
 
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data_list = json.load(f)
+        
+        added_count = 0
+        updated_count = 0
+
+        for item in data_list:
+            d_name = item.get('condition_name')
+            existing = Protocol.query.filter_by(disease_name=d_name).first()
+            
+            # تنسيق التمارين HTML
+            def format_exercises_html(ex_data):
+                html = ""
+                phases = ["phase_1", "phase_2", "phase_3"]
+                for p_key in phases:
+                    phase = ex_data.get(p_key)
+                    if phase:
+                        html += f"<h4>{phase.get('name', p_key.title())}</h4>"
+                        html += "<ul>"
+                        for ex in phase.get('exercises', []):
+                            html += f"<li><b>{ex.get('name')}</b>: {ex.get('instructions')} <i>({ex.get('dosage')})</i></li>"
+                        html += "</ul><hr>"
+                return html
+
+            # تنسيق الملاحظات
+            def format_notes(notes_data):
+                if not notes_data: return ""
+                return f"Diagnosis:\n{notes_data.get('assessment_diagnosis','')}\n\nManual Therapy:\n{notes_data.get('manual_therapy','')}\n\nPrecautions:\n{notes_data.get('precautions','')}"
+
+            if existing:
+                p = existing
+                updated_count += 1
+            else:
+                p = Protocol()
+                added_count += 1
+            
+            p.disease_name = d_name
+            p.category = item.get('category', 'General')
+            p.description = item.get('clinical_presentation', {}).get('definition', '')
+            p.keywords = f"{d_name}, {p.category}"
+            
+            electro = item.get('electrotherapy', [{}])[0]
+            p.estim_type = electro.get('type', 'TENS/FES')
+            p.estim_params = electro.get('parameters', 'See notes')
+            p.estim_role = electro.get('goal', 'Pain relief')
+            p.us_type = "Ultrasound"
+            p.us_params = "Refer to notes"
+            
+            p.exercises_list = format_exercises_html(item.get('therapeutic_exercises', {}))
+            p.exercises_role = "Rehabilitation Progression"
+            p.source_ref = item.get('scientific_reference', 'Clinical Guidelines')
+            p.notes = format_notes(item.get('clinical_notes', {}))
+            
+            if not existing:
+                db.session.add(p)
+
+        db.session.commit()
+        return f"<h1>✅ Success! Added: {added_count}, Updated: {updated_count}</h1><a href='/admin'>Dashboard</a>"
+
+    except Exception as e:
+        return f"<h1>Error: {str(e)}</h1>"
 @app.route('/setup-sys-secure-hmna12-4-2026')
 def setup_system():
     try:
@@ -671,6 +740,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
