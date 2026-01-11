@@ -82,9 +82,12 @@ class User(UserMixin, db.Model):
 
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(100), default="General")
+    # جعلنا التصنيف 200 للأمان
+    category = db.Column(db.String(200), default="General") 
     disease_name = db.Column(db.String(200), nullable=False)
-    keywords = db.Column(db.Text)  # خليناها Text للأمان
+    
+    # 👇👇 حولنا كل شيء يحتمل الطول إلى db.Text 👇👇
+    keywords = db.Column(db.Text)
     description = db.Column(db.Text)
     
     estim_type = db.Column(db.String(200))
@@ -98,18 +101,17 @@ class Protocol(db.Model):
     exercises_list = db.Column(db.Text)
     exercises_role = db.Column(db.Text)
     
-    # 👇👇 هنا التغيير المهم جداً (كانت String(200) وخليناها Text)
     ex_frequency = db.Column(db.Text)
     ex_intensity = db.Column(db.Text)
     ex_progression = db.Column(db.Text)
     
-    evidence_level = db.Column(db.String(100), default="Grade A")
+    # ⚠️ دي كانت سبب المشكلة الأخيرة، حولناها لـ Text
+    evidence_level = db.Column(db.Text) 
     
-    # 👇👇 وهنا كمان للأمان
     source_ref = db.Column(db.Text)
     
     electrode_image = db.Column(db.Text)
-    video_link = db.Column(db.String(500), nullable=True)
+    video_link = db.Column(db.Text) # أحياناً الروابط بتكون طويلة
     notes = db.Column(db.Text, nullable=True)
 
 @login_manager.user_loader
@@ -589,6 +591,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
