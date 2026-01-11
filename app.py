@@ -84,21 +84,30 @@ class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(100), default="General")
     disease_name = db.Column(db.String(200), nullable=False)
-    keywords = db.Column(db.String(500))
+    keywords = db.Column(db.Text)  # خليناها Text للأمان
     description = db.Column(db.Text)
+    
     estim_type = db.Column(db.String(200))
     estim_params = db.Column(db.Text)
     estim_role = db.Column(db.Text)
+    
     us_type = db.Column(db.String(200))
     us_params = db.Column(db.Text)
     us_role = db.Column(db.Text)
+    
     exercises_list = db.Column(db.Text)
     exercises_role = db.Column(db.Text)
-    ex_frequency = db.Column(db.String(200))
-    ex_intensity = db.Column(db.String(200))
+    
+    # 👇👇 هنا التغيير المهم جداً (كانت String(200) وخليناها Text)
+    ex_frequency = db.Column(db.Text)
+    ex_intensity = db.Column(db.Text)
     ex_progression = db.Column(db.Text)
-    evidence_level = db.Column(db.String(50), default="Grade A")
-    source_ref = db.Column(db.String(300))
+    
+    evidence_level = db.Column(db.String(100), default="Grade A")
+    
+    # 👇👇 وهنا كمان للأمان
+    source_ref = db.Column(db.Text)
+    
     electrode_image = db.Column(db.Text)
     video_link = db.Column(db.String(500), nullable=True)
     notes = db.Column(db.Text, nullable=True)
@@ -580,6 +589,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
