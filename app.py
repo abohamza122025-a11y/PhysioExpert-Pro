@@ -586,11 +586,92 @@ def setup_system():
         db.session.commit()
         return "<h1>✅ System Reset & Data Updated!</h1><a href='/login'>Login</a>"
     except Exception as e: return f"Error: {str(e)}"
+# ==========================================
+# دالة استيراد ملف JSON المولد (للعمل على Render)
+# ==========================================
+@app.route('/admin/import-generated-json')
+@admin_required
+def import_generated_json():
+    try:
+        # تحديد مسار الملف بدقة (مهم جداً في Render)
+        file_path = os.path.join(app.root_path, 'final_physio_protocols.json')
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data_list = json.load(f)
+        
+        added_count = 0
+        updated_count = 0
 
+        for item in data_list:
+            # التحقق: هل المرض موجود مسبقاً؟
+            d_name = item.get('condition_name')
+            existing = Protocol.query.filter_by(disease_name=d_name).first()
+            
+            # --- تنسيق التمارين كـ HTML ---
+            def format_exercises_html(ex_data):
+                html = ""
+                # ترتيب المراحل: 1 ثم 2 ثم 3
+                phases = ["phase_1", "phase_2", "phase_3"]
+                for p_key in phases:
+                    phase = ex_data.get(p_key)
+                    if phase:
+                        html += f"<h4>{phase.get('name', p_key.title())}: {phase.get('goal', '')}</h4>"
+                        html += "<ul>"
+                        for ex in phase.get('exercises', []):
+                            html += f"<li><b>{ex.get('name')}</b>: {ex.get('instructions')} <i>({ex.get('dosage')})</i></li>"
+                        html += "</ul><hr>"
+                return html
+
+            # --- تنسيق الملاحظات السريرية ---
+            def format_notes(notes_data):
+                if not notes_data: return ""
+                return f"Diagnosis: {notes_data.get('assessment_diagnosis','')}\n\nManual Therapy: {notes_data.get('manual_therapy','')}\n\nPrecautions: {notes_data.get('precautions','')}"
+
+            # تحديد الكائن (تحديث أم جديد)
+            if existing:
+                p = existing
+                updated_count += 1
+            else:
+                p = Protocol()
+                added_count += 1
+            
+            # --- تعبئة البيانات ---
+            p.disease_name = d_name
+            p.category = item.get('category', 'General')
+            p.description = item.get('clinical_presentation', {}).get('definition', '')
+            # توليد كلمات مفتاحية تلقائية
+            p.keywords = f"{d_name}, {p.category}, {p.description[:50]}" 
+            
+            # الأجهزة
+            electro = item.get('electrotherapy', [{}])[0] # نأخذ أول جهاز
+            p.estim_type = electro.get('type', 'TENS/FES')
+            p.estim_params = electro.get('parameters', 'See notes')
+            p.estim_role = electro.get('goal', 'Pain relief')
+            p.us_type = "Ultrasound/Other"
+            p.us_params = "Refer to clinical notes" # لأن الـ JSON يجمعهم
+            
+            # التمارين والمصادر
+            p.exercises_list = format_exercises_html(item.get('therapeutic_exercises', {}))
+            p.exercises_role = "Rehabilitation Progression"
+            p.source_ref = item.get('scientific_reference', 'Kisner & Colby')
+            p.notes = format_notes(item.get('clinical_notes', {}))
+            
+            if not existing:
+                db.session.add(p)
+
+        db.session.commit()
+        flash(f'Successfully Imported! Added: {added_count}, Updated: {updated_count}', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    except FileNotFoundError:
+        return "<h1>⚠️ Error: File 'final_physio_protocols.json' not found. Did you push it to GitHub?</h1>"
+    except Exception as e:
+        return f"<h1>❌ Error: {str(e)}</h1>"
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
+
 
 
 
