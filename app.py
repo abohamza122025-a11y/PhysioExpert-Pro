@@ -1,4 +1,4 @@
-ِimport os
+import os
 import json
 import math
 import base64
@@ -29,6 +29,8 @@ app = Flask(__name__)
 TRIAL_DAYS = 30          # التجربة المجانية
 SUB_DAYS = 30            # مدة الاشتراك الشهري
 PRINT_WAIT_HOURS = 24    # الطباعة تتفعل بعد أول 24 ساعة من الاشتراك المدفوع
+MONTHLY_PRICE_EGP = 150
+INSTAPAY_ADDRESS = "mahmoudelseleimy@instapay"
 
 # ==========================================
 # قاعدة البيانات
@@ -37,8 +39,6 @@ db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-# المفتاح السري: لو مش متضبط في Render نستخدم قيمة ثابتة مشتقة من رابط قاعدة البيانات
-# (مش قيمة افتراضية معروفة للناس). الأفضل تضبط SECRET_KEY في Render.
 _secret = os.environ.get('SECRET_KEY')
 if not _secret:
     print("WARNING: SECRET_KEY is not set. Set it in Render > Environment.")
@@ -58,12 +58,12 @@ login_manager.login_view = 'login'
 # الذكاء الاصطناعي
 # ==========================================
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    print("Warning: GEMINI_API_KEY not found in environment variables.")
-else:
+if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-
-model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
+else:
+    print("Warning: GEMINI_API_KEY not found in environment variables.")
+    model = None
 
 
 # --- بيانات الموقع الثابتة ---
@@ -71,6 +71,8 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 def inject_global_vars():
     return dict(
         support_email="physioexpert8@gmail.com",
+        instapay_address=INSTAPAY_ADDRESS,
+        monthly_price=MONTHLY_PRICE_EGP,
         disclaimer="Disclaimer: For educational purposes only."
     )
 
@@ -93,9 +95,7 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription_end = db.Column(db.DateTime, nullable=True)
-    # تاريخ بداية الاشتراك المدفوع (لحساب أول 24 ساعة)
     subscribed_at = db.Column(db.DateTime, nullable=True)
-    # عمود can_print القديم بقى "استثناء يدوي من الأدمن" للمشتركين فقط
     can_print_override = db.Column('can_print', db.Boolean, default=False)
 
     # ---------- حالة الاشتراك ----------
@@ -132,7 +132,7 @@ class User(UserMixin, db.Model):
             return False
         if self.can_print_override:
             return True
-        if self.subscribed_at is None:      # مشتركين قدام قبل إضافة التاريخ
+        if self.subscribed_at is None:
             return True
         unlock = self.subscribed_at + timedelta(hours=PRINT_WAIT_HOURS)
         return datetime.utcnow() >= unlock
@@ -180,7 +180,7 @@ class Protocol(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 def admin_required(f):
@@ -195,7 +195,6 @@ def admin_required(f):
 
 # ==========================================
 # تحديث الجداول تلقائيًا عند التشغيل
-# (بيضيف الأعمدة الناقصة من غير ما يمسح بيانات)
 # ==========================================
 def ensure_schema():
     messages = []
@@ -209,6 +208,8 @@ def ensure_schema():
                 'protocol': [('video_link', 'TEXT'), ('notes', 'TEXT')],
             }
             for table, cols in wanted.items():
+                if not insp.has_table(table):
+                    continue
                 existing = {c['name'] for c in insp.get_columns(table)}
                 for name, ctype in cols:
                     if name in existing:
@@ -253,7 +254,6 @@ def lock_printing(resp):
 
 # ==========================================
 # معاملات الموجات فوق الصوتية (Ultrasound) لكل الحالات
-# القيم مبنية على المعاملات العلاجية الشائعة، راجعها على المرجع اللي بتعتمد عليه.
 # ==========================================
 NONE3 = ("None", "None", "None")
 
@@ -326,9 +326,7 @@ US_RULES = {
         "Ultrasound (caution)",
         "Never over acutely inflamed joints | Stable joints only: 3 MHz | Pulsed 20% | 0.5 W/cm2 | 3-5 min per small joint",
         "Paraffin wax and gentle ROM for stiffness. Ultrasound is optional."),
-    "Scoliosis": (
-        "None", "None",
-        "None"),
+    "Scoliosis": NONE3,
     "Achilles Tendinitis": (
         "Therapeutic Ultrasound (Pulsed)",
         "3 MHz | Pulsed 20% | 0.5-1.0 W/cm2 | 3-5 min along the tendon | 3x/week",
@@ -444,7 +442,6 @@ US_RULES = {
         "Early gentle ROM, deep neck flexor training and posture education."),
 }
 
-# بدائل الكهرباء للحالات اللي كان فيها Ultrasound مكتوب غلط في خانة الكهرباء
 TENS_CONV = (
     "TENS (Conventional)",
     "80-100 Hz | 100-200 us | Sensory-level intensity | 20-30 min | Daily",
@@ -494,6 +491,8 @@ def apply_us_rule(p):
 # الذكاء الاصطناعي
 # ==========================================
 def get_ai_protocol(disease_search):
+    if not model:
+        return None
     try:
         config = genai.types.GenerationConfig(
             temperature=0.7,
@@ -534,10 +533,12 @@ def get_ai_protocol(disease_search):
 
         if text_response.startswith("```json"):
             text_response = text_response[7:]
+        elif text_response.startswith("```"):
+            text_response = text_response[3:]
         if text_response.endswith("```"):
             text_response = text_response[:-3]
 
-        data = json.loads(text_response)
+        data = json.loads(text_response.strip())
 
         if "error" in data:
             return None
@@ -552,7 +553,6 @@ def get_ai_protocol(disease_search):
 # المسارات (Routes)
 # ==========================================
 
-# تحديث الجداول (للأدمن فقط). الأعمدة بتتضاف تلقائيًا عند التشغيل كمان.
 @app.route('/admin/update-db-schema')
 @admin_required
 def update_db_schema():
@@ -572,14 +572,12 @@ def toggle_print(user_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# ---------- تفعيل / إلغاء الاشتراك (بعد تحويل InstaPay) ----------
 @app.route('/admin/activate/<int:user_id>', methods=['POST'])
 @admin_required
 def admin_activate(user_id):
     u = User.query.get_or_404(user_id)
     now = datetime.utcnow()
     if u.is_paid:
-        # تجديد وهو لسه مشترك: نمدد من تاريخ الانتهاء ومنلمسش تاريخ بداية الاشتراك
         u.subscription_end = u.subscription_end + timedelta(days=SUB_DAYS)
     else:
         u.subscribed_at = now
@@ -603,7 +601,6 @@ def admin_cancel_subscription(user_id):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # الزائر غير المسجل يشوف صفحة الهبوط
     if not current_user.is_authenticated:
         return render_template('landing.html')
 
@@ -633,6 +630,27 @@ def home():
 @app.route('/subscription')
 def subscription_expired():
     return render_template('subscribe.html')
+
+
+@app.route('/terms')
+def terms():
+    return (
+        "<div style='max-width:760px;margin:40px auto;font-family:sans-serif;line-height:1.8;direction:rtl'>"
+        "<h1>الشروط والأحكام - Physio Expert Pro</h1>"
+        "<p>المحتوى المعروض على المنصة مخصص للأغراض التعليمية والمرجعية لأخصائيي وطلبة العلاج الطبيعي، ولا يُغني عن التقييم الإكلينيكي المباشر للمريض.</p>"
+        "<p>تُتاح تجربة مجانية لمدة 30 يومًا بدون طباعة، ويُفعّل الاشتراك الشهري بقيمة 150 جنيهًا عبر InstaPay مع إمكانية الإلغاء والاسترداد خلال 24 ساعة من التفعيل.</p>"
+        "<a href='/'>العودة للرئيسية</a></div>"
+    )
+
+
+@app.route('/privacy')
+def privacy():
+    return (
+        "<div style='max-width:760px;margin:40px auto;font-family:sans-serif;line-height:1.8;direction:rtl'>"
+        "<h1>سياسة الخصوصية - Physio Expert Pro</h1>"
+        "<p>نستخدم البريد الإلكتروني وكلمة المرور المشفرة لإدارة حسابك واشتراكك فقط، ولا نشارك بياناتك الشخصية مع أي طرف ثالث.</p>"
+        "<a href='/'>العودة للرئيسية</a></div>"
+    )
 
 
 @app.route('/admin')
@@ -810,9 +828,9 @@ def import_excel():
             p.source_ref = get_val(row, 'source_ref')
 
             p.estim_params = get_val(row, 'estim_params')
-            p.estim_type = "Electrical Stimulation"
+            p.estim_type = get_val(row, 'estim_type') or "Electrical Stimulation"
             p.us_params = get_val(row, 'us_params')
-            p.us_type = "Ultrasound"
+            p.us_type = get_val(row, 'us_type') or "Ultrasound"
 
             p.exercises_list = get_val(row, 'exercises_list')
             p.exercises_role = get_val(row, 'exercises_role')
@@ -822,7 +840,6 @@ def import_excel():
             p.ex_progression = get_val(row, 'ex_progression')
             p.evidence_level = get_val(row, 'evidence_level')
 
-            # لو ملف الإكسل مفيهوش معاملات Ultrasound نطبّق القاعدة الجاهزة
             if not p.us_params:
                 apply_us_rule(p)
 
@@ -847,7 +864,6 @@ def delete_protocol(id):
     return redirect(url_for('admin_dashboard'))
 
 
-# ---------- تصحيح معاملات الـ Ultrasound في كل البرامج (مرة واحدة) ----------
 @app.route('/admin/fix-ultrasound')
 @admin_required
 def fix_ultrasound():
@@ -889,8 +905,9 @@ def _format_notes(notes_data):
 @app.route('/admin/import-generated-json')
 @admin_required
 def import_generated_json():
+    json_filename = os.environ.get('PROTOCOLS_JSON_FILE', 'final_physio_protocols.json')
+    file_path = os.path.join(app.root_path, json_filename)
     try:
-        file_path = os.path.join(app.root_path, 'final_physio_protocols.json')
         with open(file_path, 'r', encoding='utf-8') as f:
             data_list = json.load(f)
 
@@ -899,6 +916,8 @@ def import_generated_json():
 
         for item in data_list:
             d_name = item.get('condition_name')
+            if not d_name:
+                continue
             existing = Protocol.query.filter_by(disease_name=d_name).first()
 
             if existing:
@@ -924,7 +943,6 @@ def import_generated_json():
             p.source_ref = item.get('scientific_reference', 'Kisner & Colby')
             p.notes = _format_notes(item.get('clinical_notes', {}))
 
-            # معاملات الـ Ultrasound: من القواعد الجاهزة بدل "Refer to notes"
             if not apply_us_rule(p) and not existing:
                 p.us_type = "Ultrasound"
                 p.us_params = ""
@@ -937,7 +955,7 @@ def import_generated_json():
         return redirect(url_for('admin_dashboard'))
 
     except FileNotFoundError:
-        return "<h1>Error: File 'final_physio_protocols.json' not found. Did you push it to GitHub?</h1>"
+        return f"<h1>Error: File '{escape(json_filename)}' not found in {escape(app.root_path)}.</h1>"
     except Exception as e:
         db.session.rollback()
         return f"<h1>Error: {escape(str(e))}</h1>"
@@ -952,14 +970,17 @@ def update_content():
 # ---------- تسجيل الدخول والتسجيل ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    disease_q = request.args.get('disease') or request.form.get('disease') or ''
     if request.method == 'POST':
         user = User.query.filter_by(email=request.form['email']).first()
         if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
+            if disease_q:
+                return redirect(url_for('home', disease=disease_q))
             return redirect(url_for('home'))
         else:
             flash('Login Failed. Check email/password', 'danger')
-    return render_template('login.html')
+    return render_template('login.html', disease=disease_q)
 
 
 @app.route('/forgot-password')
@@ -969,16 +990,21 @@ def forgot_password():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    disease_q = request.args.get('disease') or request.form.get('disease') or ''
     if request.method == 'POST':
         try:
             pw = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
-            db.session.add(User(email=request.form['email'], password=pw))
+            new_user = User(email=request.form['email'], password=pw)
+            db.session.add(new_user)
             db.session.commit()
-            return redirect(url_for('login'))
+            login_user(new_user)
+            if disease_q:
+                return redirect(url_for('home', disease=disease_q))
+            return redirect(url_for('home'))
         except Exception:
             db.session.rollback()
             flash('Email already exists', 'danger')
-    return render_template('register.html')
+    return render_template('register.html', disease=disease_q)
 
 
 @app.route('/logout')
