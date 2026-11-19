@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physio Expert Pro | بروتوكولات العلاج الطبيعي في ثوانٍ</title>
+<meta name="description" content="ابحث باسم الحالة أو التشخيص واحصل على برنامج علاج طبيعي متكامل. مخصص لأخصائيي وطلبة العلاج الطبيعي. جرّب مجانًا.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#0d6efd; --cyan:#0dcaf0; --yellow:#ffc107; --ink:#1b2430; --muted:#5b6675;
+  --bg:#ffffff; --soft:#f3f7fd; --line:#e3e9f2; --red:#dc3545;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7}
+a{text-decoration:none;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font-weight:800;font-size:1.35rem;color:var(--blue);direction:ltr}
+.nav-links{display:flex;gap:22px;align-items:center;font-weight:600}
+.nav-links a:hover{color:var(--blue)}
+.btn{display:inline-block;padding:12px 26px;border-radius:999px;font-weight:700;font-family:inherit;border:0;cursor:pointer;transition:.2s}
+.btn-yellow{background:var(--yellow);color:#111}
+.btn-yellow:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(255,193,7,.4)}
+.btn-outline{border:2px solid var(--blue);color:var(--blue);background:#fff}
+.btn-outline:hover{background:var(--blue);color:#fff}
+.btn-white{background:#fff;color:var(--blue)}
+
+/* hero */
+.hero{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;padding:80px 0 90px;text-align:center}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.35;margin-bottom:14px}
+.hero p.sub{font-size:1.2rem;opacity:.95;max-width:680px;margin:0 auto 30px}
+.search{max-width:640px;margin:0 auto 18px;background:#fff;border-radius:999px;padding:8px;display:flex;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.search input{flex:1;border:0;outline:0;padding:0 18px;font-family:inherit;font-size:1rem;background:transparent;color:var(--ink);min-width:0}
+.hero .note{font-size:.95rem;opacity:.9}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.chips span{background:rgba(255,255,255,.18);padding:4px 16px;border-radius:999px;font-size:.9rem;direction:ltr}
+
+/* sections */
+section{padding:72px 0}
+.alt{background:var(--soft)}
+h2{font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;text-align:center;margin-bottom:10px}
+.lead{text-align:center;color:var(--muted);max-width:640px;margin:0 auto 42px}
+.grid{display:grid;gap:22px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px}
+.card .ic{width:50px;height:50px;border-radius:14px;background:#e7f0ff;color:var(--blue);display:grid;place-items:center;font-size:1.5rem;margin-bottom:14px}
+.card h3{font-size:1.15rem;margin-bottom:6px}
+.card p{color:var(--muted);font-size:.97rem}
+.step-n{width:42px;height:42px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:12px}
+
+/* sample protocol */
+.proto{max-width:900px;margin:0 auto;font-family:'Poppins',system-ui,sans-serif;text-align:left;background:#f5f8fc;border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:0 16px 40px rgba(13,110,253,.10)}
+.proto-top{background:#fff;border-radius:16px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;box-shadow:0 2px 8px rgba(20,40,80,.06);margin-bottom:16px}
+.proto-top h3{font-size:1.7rem;font-weight:700;line-height:1.25;margin-top:8px;color:var(--ink)}
+.pill{display:inline-block;background:#dbe8ff;color:var(--blue);font-size:.75rem;font-weight:700;padding:3px 14px;border-radius:999px}
+.pill.gray{background:#f0f2f5;color:#6b7280;font-size:.85rem;font-weight:600}
+.top-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.printbtn{background:var(--red);color:#fff;font-weight:600;font-size:.9rem;padding:8px 20px;border-radius:999px}
+.blk{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);margin-bottom:16px}
+.blk-h{background:linear-gradient(90deg,var(--blue),var(--cyan));color:#fff;font-weight:600;padding:14px 22px;font-size:1rem}
+.blk-b{padding:20px 24px}
+.blk-b p{color:#2e3846;font-size:.97rem;line-height:1.75}
+.mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.mod{background:#fff;border-radius:16px;padding:22px;box-shadow:0 2px 8px rgba(20,40,80,.06);border-left:5px solid var(--blue)}
+.mod.green{border-left-color:#198754}
+.mod-h{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.mod-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#e7f0ff;color:var(--blue);font-size:1.2rem}
+.mod.green .mod-ic{background:#e3f4ea;color:#198754}
+.mod-h b{font-size:1.15rem;color:var(--blue)}
+.mod.green .mod-h b{color:#198754}
+.type{font-weight:700;margin-bottom:10px}
+.type .pill{font-size:.78rem;border:1px solid #9ec2ff;margin-inline-start:6px}
+.mod.green .type .pill{background:#e3f4ea;color:#198754;border-color:#a5d6b7}
+.params{background:#f6f8fb;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.params small{display:block;font-weight:700;font-size:.7rem;letter-spacing:.06em;color:#6b7280;margin-bottom:4px}
+.params span{font-size:.93rem;color:#2e3846}
+.goal{border-top:1px solid var(--line);padding-top:12px;font-style:italic;color:#4b5563;font-size:.93rem}
+.goal b{color:#2e3846}
+.phase-t{color:var(--blue);font-weight:700;font-size:1.1rem;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.ex{border-left:4px solid var(--cyan);background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(20,40,80,.08);padding:14px 18px;margin-bottom:12px}
+.ex h4{font-size:1rem;font-weight:700;color:#1f2d3d;margin-bottom:4px}
+.ex h4::before{content:"✓";color:#198754;margin-inline-end:10px}
+.ex p{font-size:.93rem;color:#3b4654;line-height:1.7}
+.ex .dose{display:inline-block;margin-top:8px;font-size:.85rem;color:#6b7280;background:#f4f6f9;border:1px solid #e6eaf0;border-radius:6px;padding:3px 12px}
+.sample-cta{text-align:center;margin-top:28px}
+@media(max-width:640px){.proto{padding:12px;border-radius:18px}.proto-top h3{font-size:1.35rem}}
+
+/* pricing */
+.plans{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.plan{background:#fff;border:2px solid var(--line);border-radius:20px;padding:32px;text-align:center}
+.plan.best{border-color:var(--blue);position:relative}
+.plan.best .badge{position:absolute;top:-14px;inset-inline:0;margin:auto;width:max-content;background:var(--yellow);font-weight:700;font-size:.85rem;padding:2px 16px;border-radius:999px}
+.plan h3{font-size:1.2rem;margin-bottom:6px}
+.price{font-size:2.2rem;font-weight:800;color:var(--blue);margin:8px 0}
+.price small{font-size:1rem;color:var(--muted);font-weight:600}
+.plan ul{list-style:none;text-align:start;margin:18px 0 24px;color:var(--muted)}
+.plan li{padding:5px 0}
+.plan li::before{content:"✓";color:#198754;font-weight:800;margin-inline-end:8px}
+
+/* faq */
+details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 22px;margin-bottom:12px;max-width:780px;margin-inline:auto}
+summary{font-weight:700;cursor:pointer}
+details p{color:var(--muted);margin-top:10px}
+
+/* cta + footer */
+.cta{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;text-align:center}
+.cta p{opacity:.95;margin:6px 0 24px}
+footer{padding:36px 0;text-align:center;color:var(--muted);font-size:.95rem}
+.disc{color:var(--red);font-weight:700;margin-bottom:8px}
+footer .links{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+footer a:hover{color:var(--blue)}
+
+@media(max-width:640px){
+  .nav-links a.hide-m{display:none}
+  .search{flex-direction:column;border-radius:24px;padding:12px}
+  .search input{padding:10px 8px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a href="/" class="logo">♥ Physio Expert Pro</a>
+    <div class="nav-links">
+      <a class="hide-m" href="#features">المميزات</a>
+      <a class="hide-m" href="#sample">مثال</a>
+      <a class="hide-m" href="#pricing">الأسعار</a>
+      <a class="hide-m" href="#faq">أسئلة شائعة</a>
+      <a href="/login">دخول</a>
+      <a href="/register" class="btn btn-yellow">جرّب مجانًا</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>اكتب اسم الحالة…<br>واحصل على برنامج علاجي متكامل</h1>
+    <p class="sub">منصة لأخصائيي وطلبة العلاج الطبيعي. ابحث بالمرض أو التشخيص وخد بروتوكول منظم خطوة بخطوة بدل ما تضيع وقتك بين المراجع.</p>
+    <form class="search" action="/register" method="get">
+      <input type="text" placeholder="مثال: ACL, Stroke, Frozen Shoulder..." aria-label="ابحث عن حالة">
+      <button class="btn btn-yellow" type="submit">ابدأ البحث</button>
+    </form>
+    <p class="note">تجربة مجانية 30 يومًا • إلغاء واسترداد خلال 24 ساعة من الاشتراك</p>
+    <div class="chips"><span>ACL</span><span>Stroke</span><span>Low Back Pain</span><span>Rotator Cuff</span><span>Knee OA</span></div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <h2>تشتغل إزاي؟</h2>
+    <p class="lead">ثلاث خطوات بسيطة من السؤال للبرنامج.</p>
+    <div class="grid g3">
+      <div class="card"><div class="step-n">1</div><h3>اكتب الحالة</h3><p>اسم المرض أو التشخيص بالعربي أو الإنجليزي.</p></div>
+      <div class="card"><div class="step-n">2</div><h3>راجع البروتوكول</h3><p>مراحل العلاج، التمارين، الأهداف، وعلامات التقدم في صفحة واحدة.</p></div>
+      <div class="card"><div class="step-n">3</div><h3>طبّقه أو ذاكر منه</h3><p>استخدمه كمرجع سريع في العيادة، أو للمذاكرة والتحضير للامتحانات.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="alt">
+  <div class="wrap">
+    <h2>ليه Physio Expert Pro؟</h2>
+    <p class="lead">اتصمم عشان يوفر وقتك ويرتب معلوماتك.</p>
+    <div class="grid g3">
+      <div class="card"><div class="ic">🔎</div><h3>بحث سريع</h3><p>نتيجة في ثواني بمجرد كتابة اسم الحالة.</p></div>
+      <div class="card"><div class="ic">📋</div><h3>برنامج متكامل</h3><p>مراحل واضحة من التقييم للتأهيل والعودة للنشاط.</p></div>
+      <div class="card"><div class="ic">🎓</div><h3>للطلبة والأخصائيين</h3><p>مناسب للمذاكرة والتدريب العملي والمراجعة السريعة.</p></div>
+      <div class="card"><div class="ic">📚</div><h3>مبني على مصادر</h3><p>[اكتب هنا: البروتوكولات مبنية على guidelines وأبحاث منشورة، مع ذكر المراجع]</p></div>
+      <div class="card"><div class="ic">📱</div><h3>على أي جهاز</h3><p>موبايل أو لابتوب، من العيادة أو من البيت.</p></div>
+      <div class="card"><div class="ic">💰</div><h3>سعر رمزي</h3><p>اشتراك شهري في متناول الطالب والأخصائي.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="sample">
+  <div class="wrap">
+    <h2>شوف شكل البرنامج</h2>
+    <p class="lead">مثال من داخل المنصة: بروتوكول Stroke. محتوى البروتوكولات بالإنجليزية.</p>
+
+    <div class="proto" dir="ltr">
+
+      <div class="proto-top">
+        <div>
+          <span class="pill">Protocol Result</span>
+          <h3>Stroke (Hemiplegia)</h3>
+        </div>
+        <div class="top-r">
+          <span class="pill gray">Stroke (Hemiplegia)</span>
+          <span class="printbtn">Print</span>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h">Clinical Presentation &amp; Definition</div>
+        <div class="blk-b">
+          <p>Hemiplegia refers to unilateral paralysis or severe weakness resulting from a stroke, typically affecting one side of the body opposite to the side of the brain lesion. It manifests as impaired motor control, spasticity, sensory deficits, balance issues, and often cognitive or perceptual impairments, significantly impacting functional independence.</p>
+        </div>
+      </div>
+
+      <div class="mods">
+        <div class="mod">
+          <div class="mod-h"><div class="mod-ic">⚡</div><b>Electrotherapy</b></div>
+          <div class="type">Type: <span class="pill">Functional Electrical Stimulation (FES)</span></div>
+          <div class="params"><small>PARAMETERS</small><span>Frequency: 20-50 Hz; Pulse Duration: 200-300 µs; On/Off Ratio: 1:3 to 1:5; Ramp up/down: 1-2 sec; Intensity: To achieve a strong, non-painful contraction or functional movement.</span></div>
+          <div class="goal"><b>Goal:</b> Facilitate muscle contraction, promote motor learning and neuroplasticity, improve strength and range of motion, reduce spasticity, prevent disuse atrophy, and improve functional task performance (e.g., gait, reaching).</div>
+        </div>
+
+        <div class="mod green">
+          <div class="mod-h"><div class="mod-ic">∿</div><b>Ultrasound</b></div>
+          <div class="type">Type: <span class="pill">Therapeutic Ultrasound (Pulsed / Continuous)</span></div>
+          <div class="params"><small>PARAMETERS</small><span>Frequency: 1 MHz (deep) or 3 MHz (superficial); Mode: pulsed 20-50% (acute/painful) or continuous (chronic tightness); Intensity: 0.5-1.0 W/cm²; Duration: 5-8 min per area with a moving transducer; 3-5 sessions/week. Use lower intensity over areas of impaired sensation.</span></div>
+          <div class="goal"><b>Goal:</b> Adjunct for hemiplegic shoulder pain and periarticular soft-tissue tightness: reduce pain, increase tissue extensibility before stretching and mobilization to improve range of motion.</div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h">🏃 Therapeutic Exercises</div>
+        <div class="blk-b">
+          <div class="phase-t">Early Mobilization and Foundational Motor Re-education (Acute/Early Sub-acute)</div>
+
+          <div class="ex">
+            <h4>Passive Range of Motion (PROM)</h4>
+            <p>: Carefully move all affected joints through their full available range of motion, ensuring no pain or undue stress. Focus on the shoulder (to prevent subluxation and pain), elbow, wrist, hip, knee, and ankle.</p>
+            <span class="dose">(10-15 repetitions per joint, 2-3 times per day.)</span>
+          </div>
+
+          <div class="ex">
+            <h4>Assisted Active Range of Motion (AAROM)</h4>
+            <p>: Encourage the patient to initiate movement with the paretic limb while the therapist or unaffected limb provides assistance to complete the range. Focus on movements with early motor return, such as shoulder flexion, elbow flexion/extension, and ankle dorsiflexion.</p>
+            <span class="dose">(10-15 repetitions per movement, 2-3 times per day.)</span>
+          </div>
+
+          <div class="ex">
+            <h4>Bridging (Assisted)</h4>
+            <p>: From a supine position with knees bent and feet flat, instruct the patient to lift their hips off the bed. Provide manual assistance at the pelvis as needed. Focus on gluteal and hamstring activation, and trunk stability.</p>
+            <span class="dose">(10-15 repetitions, 2-3 times per day, holding for 3-5 seconds if possible.)</span>
+          </div>
+
+          <div class="ex">
+            <h4>Bed Mobility: Rolling</h4>
+            <p>: Practice rolling from supine to side-lying towards both the affected and unaffected sides. Use visual cues, upper limb movements, and lower limb push-off as appropriate. Progress to independent rolling.</p>
+            <span class="dose">(5-10 repetitions per side, 2-3 times per day.)</span>
+          </div>
+
+          <div class="ex">
+            <h4>Supported Sitting Balance</h4>
+            <p>: Progress from sitting with full trunk support to unsupported sitting, initially with feet supported. Focus on maintaining an upright posture, head control, and reacting to small perturbations. Encourage weight shifting within the base of support.</p>
+            <span class="dose">(5-15 minutes, 2-3 times per day, gradually increasing duration and decreasing support.)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sample-cta"><a href="/register" class="btn btn-yellow">جرّب البحث عن أي حالة مجانًا</a></div>
+  </div>
+</section>
+
+<section id="pricing" class="alt">
+  <div class="wrap">
+    <h2>الأسعار</h2>
+    <p class="lead">ابدأ مجانًا، واشترك لما تتأكد إنها بتفيدك.</p>
+    <div class="plans">
+      <div class="plan">
+        <h3>التجربة المجانية</h3>
+        <div class="price">مجانًا</div>
+        <ul>
+          <li>30 يومًا كاملة للتجربة</li>
+          <li>بحث وعرض البروتوكولات</li>
+          <li>بدون طباعة البرنامج خلال التجربة</li>
+        </ul>
+        <a href="/register" class="btn btn-outline">ابدأ التجربة</a>
+      </div>
+      <div class="plan best">
+        <div class="badge">الأكثر اختيارًا</div>
+        <h3>الاشتراك الشهري</h3>
+        <div class="price">150 <small>جنيه / شهريًا</small></div>
+        <ul>
+          <li>كل البروتوكولات بدون حدود</li>
+          <li>طباعة البرامج بعد مرور أول 24 ساعة</li>
+          <li>إلغاء واسترداد المبلغ خلال 24 ساعة</li>
+          <li>الدفع عبر InstaPay</li>
+        </ul>
+        <a href="mailto:physioexpert8@gmail.com?subject=%D8%B7%D9%84%D8%A8%20%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20Physio%20Expert%20Pro&body=%D8%A7%D9%84%D8%A7%D8%B3%D9%85%3A%0A%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%91%D9%84%20%D8%B9%D9%84%D9%89%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9%3A%0A%D9%85%D8%B1%D9%81%D9%82%20%D8%A5%D9%8A%D8%B5%D8%A7%D9%84%20%D8%A7%D9%84%D8%AA%D8%AD%D9%88%D9%8A%D9%84%20%D8%B9%D8%A8%D8%B1%20InstaPay." class="btn btn-yellow">اشترك الآن</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>أسئلة شائعة</h2>
+    <p class="lead">&nbsp;</p>
+    <details><summary>هل المنصة بديلة عن التقييم الإكلينيكي؟</summary><p>لا. المحتوى للأغراض التعليمية والمرجعية، وقرار العلاج يعتمد دائمًا على تقييم الأخصائي لحالة كل مريض.</p></details>
+    <details><summary>إيه اللي بيحصل بعد انتهاء التجربة المجانية؟</summary><p>الحساب بيفضل موجود، وتقدر تشترك اشتراك شهري للاستمرار. مفيش خصم تلقائي من غير موافقتك.</p></details>
+    <details><summary>أقدر ألغي الاشتراك وأسترد فلوسي؟</summary><p>أيوه. تقدر تلغي الاشتراك خلال 24 ساعة من الاشتراك وتسترد المبلغ كاملًا.</p></details>
+    <details><summary>أقدر أطبع البرنامج؟</summary><p>الطباعة غير متاحة خلال التجربة المجانية ولا خلال أول 24 ساعة من الاشتراك (فترة الاسترداد)، وتتفعّل بعد انتهائها.</p></details>
+    <details><summary>إزاي أشترك وأدفع؟</summary><p>الدفع عبر <b dir="ltr">InstaPay</b> على العنوان: <b dir="ltr">mahmoudelseleimy@instapay</b> (150 جنيه شهريًا). بعد التحويل ابعت إيصال التحويل والإيميل المسجّل على الموقع إلى <a href="mailto:physioexpert8@gmail.com?subject=%D8%B7%D9%84%D8%A8%20%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20Physio%20Expert%20Pro&body=%D8%A7%D9%84%D8%A7%D8%B3%D9%85%3A%0A%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%91%D9%84%20%D8%B9%D9%84%D9%89%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9%3A%0A%D9%85%D8%B1%D9%81%D9%82%20%D8%A5%D9%8A%D8%B5%D8%A7%D9%84%20%D8%A7%D9%84%D8%AA%D8%AD%D9%88%D9%8A%D9%84%20%D8%B9%D8%A8%D8%B1%20InstaPay." style="color:var(--blue);font-weight:700" dir="ltr">physioexpert8@gmail.com</a> وهنفعّل اشتراكك.</p></details>
+    <details><summary>أتواصل مع الدعم إزاي؟</summary><p>راسلنا على <a href="mailto:physioexpert8@gmail.com" style="color:var(--blue);font-weight:700" dir="ltr">physioexpert8@gmail.com</a></p></details>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>جاهز تجرّب؟</h2>
+    <p>سجّل حسابك وابدأ بحث أول حالة دلوقتي.</p>
+    <a href="/register" class="btn btn-yellow">ابدأ تجربتك المجانية</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disc">⚠ تنبيه: المحتوى للأغراض التعليمية فقط.</div>
+    <div class="links"><a href="/terms">الشروط والأحكام</a><a href="/privacy">سياسة الخصوصية</a><a href="mailto:physioexpert8@gmail.com">الدعم</a></div>
+    <div>© 2026 Physio Expert Pro</div>
+  </div>
+</footer>
+
+</body>
+</html>
