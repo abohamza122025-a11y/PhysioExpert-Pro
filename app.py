@@ -36,9 +36,11 @@ INSTAPAY_ADDRESS = "mahmoudelseleimy@instapay"
 # قاعدة البيانات
 # ==========================================
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
+if db_url:
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url.startswith("postgresql://") and "+psycopg2" not in db_url and "+psycopg" not in db_url:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 _secret = os.environ.get('SECRET_KEY')
 if not _secret:
     print("WARNING: SECRET_KEY is not set. Set it in Render > Environment.")
