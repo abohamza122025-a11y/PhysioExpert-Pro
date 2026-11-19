@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physio Expert Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)" rel="stylesheet">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)">
+    <link href="[https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap)" rel="stylesheet">
     
-   <style>
-        /* تنسيقات الصفحة العامة */
+    <style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background-color: #f8f9fa; 
@@ -19,7 +18,6 @@
             min-height: 100vh;
         }
         
-        /* الهيرو سكشن (الجزء الأزرق) */
         .hero-section { 
             background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
             color: white; 
@@ -29,40 +27,11 @@
             text-align: center;
         }
 
-        /* كارت البحث */
-        .search-card {
-            background-color: white;
-            width: 90%;
-            max-width: 600px;
-            margin: -60px auto 30px;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            position: relative;
-        }
-
-        .form-control {
-            padding: 12px 15px;
-            border-radius: 12px;
-            border: 1px solid #e0e0e0;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
-            border-color: #0d6efd;
-        }
-
-        /* =========================================
-           تنسيق المحتوى الطبي (التمارين والملاحظات)
-           ========================================= */
         .protocol-content {
             font-size: 1rem;
             color: #333;
         }
         
-        /* عناوين المراحل (Phase 1, Phase 2...) */
         .protocol-content h4 {
             color: #0d6efd;
             font-weight: 700;
@@ -73,28 +42,24 @@
             font-size: 1.2rem;
         }
 
-        /* قوائم التمارين */
         .protocol-content ul {
-            list-style: none; /* إخفاء النقاط العادية */
+            list-style: none;
             padding-left: 0;
         }
 
-        /* عنصر التمرين الواحد */
         .protocol-content li {
             position: relative;
-            padding-left: 35px;
             margin-bottom: 12px;
             line-height: 1.6;
             background-color: #fff;
             padding: 12px 15px 12px 35px;
             border-radius: 8px;
-            border-left: 4px solid #0dcaf0; /* خط ملون على اليسار */
+            border-left: 4px solid #0dcaf0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        /* علامة صح ✔️ بجانب كل تمرين */
         .protocol-content li::before {
-            content: "\f00c"; /* رمز الصح من FontAwesome */
+            content: "\f00c";
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
             position: absolute;
@@ -103,16 +68,14 @@
             color: #198754;
         }
 
-        /* اسم التمرين بالخط العريض */
         .protocol-content b {
             color: #2c3e50;
             font-weight: 700;
             font-size: 1.05em;
-            display: block; /* يجعله في سطر منفصل */
+            display: block;
             margin-bottom: 4px;
         }
 
-        /* الجرعة (Dosage) */
         .protocol-content i {
             display: block;
             color: #6c757d;
@@ -126,9 +89,8 @@
             border: 1px solid #e9ecef;
         }
 
-        /* تنسيق الملاحظات الطبية لكي تحترم الأسطر */
         .notes-content {
-            white-space: pre-wrap; /* هذا السطر هو السر في ترتيب الملاحظات */
+            white-space: pre-wrap;
             line-height: 1.8;
         }
 
@@ -140,12 +102,9 @@
             color: #6c757d;
             border-top: 1px solid #eee;
         }
-    </style>
 
-    <style>
-        /* تنسيقات الطباعة */
         @media print {
-            .no-print, .navbar, footer, .alert, .hero-section, form { display: none !important; }
+            .no-print, .navbar, footer, .alert-info, .hero-section, form { display: none !important; }
             .card { border: none !important; box-shadow: none !important; }
             .container { margin-top: 0 !important; max-width: 100% !important; }
             .protocol-content li { page-break-inside: avoid; border: 1px solid #eee; }
@@ -179,6 +138,11 @@
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto align-items-center gap-3">
         {% if current_user.is_authenticated %}
+            <li class="nav-item">
+                <span class="badge bg-info-subtle text-primary border border-info-subtle px-3 py-2 rounded-pill">
+                    {{ user.status_label }}
+                </span>
+            </li>
             {% if current_user.is_admin %}
                 <li class="nav-item">
                     <a href="/admin" class="btn btn-warning btn-sm fw-bold text-dark px-3 rounded-pill"><i class="fas fa-cog"></i> Admin</a>
@@ -205,10 +169,10 @@
         <h1 class="display-4 fw-bold mb-3">Physio Expert Pro</h1>
         <p class="lead mb-4 opacity-75 fw-light" style="font-size: 1.25rem;">Advanced Physiotherapy Protocols</p>
         <div class="row justify-content-center">
-            <div class="col-md-15 col-lg-8">
-                <form action="/" method="POST" class="position-relative">
-                    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="e.g. ACL, Stroke..." required style="font-size: 1rem; padding-right: 120px !important;">
-                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
+            <div class="col-md-10 col-lg-8">
+                <form action="/" method="POST" class="position-relative" id="searchForm">
+                    <input type="text" name="disease" value="{{ request.args.get('disease') or request.form.get('disease') or '' }}" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="e.g. ACL, Stroke, Frozen Shoulder..." required style="font-size: 1rem; padding-right: 130px !important;">
+                    <button type="submit" id="searchBtn" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
                         <i class="fas fa-search me-2"></i> Search
                     </button>
                 </form>
@@ -221,8 +185,7 @@
     {% if result %}
     
     <div class="mb-5">
-        
-        <div class="card-custom p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 position-relative bg-white rounded shadow-sm border">
+        <div class="p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 position-relative bg-white rounded shadow-sm border">
             <div style="flex: 1;">
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill mb-2">Protocol Result</span>
                 <h2 class="fw-bold text-dark mb-0 display-6">{{ result.disease_name }}</h2>
@@ -233,14 +196,14 @@
                     {{ (result.keywords or 'General').split(',')[0] }}
                 </span>                
                 {% if current_user.is_admin or current_user.can_print %}
-                    <button onclick="window.print()" class="btn btn-danger rounded-pill px-3 py-2 shadow-sm no-print-btn d-flex align-items-center">
+                    <button onclick="window.print()" class="btn btn-danger rounded-pill px-3 py-2 shadow-sm no-print d-flex align-items-center">
                         <i class="fas fa-file-pdf me-2"></i> Print
                     </button>
                 {% endif %}
             </div>
         </div>
         
-        <div class="mint-table-container shadow-sm mb-5 bg-white rounded overflow-hidden border">
+        <div class="shadow-sm mb-5 bg-white rounded overflow-hidden border">
             <div class="text-white p-3 ps-4 fw-bold d-flex align-items-center" style="background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
                 <i class="fas fa-notes-medical me-2 fs-5"></i> Clinical Presentation & Definition
             </div>
@@ -250,9 +213,8 @@
         </div>
 
         <div class="row g-4 mb-5 align-items-stretch">
-            
             <div class="col-md-6">
-                <div class="card-custom h-100 p-4 border-start border-5 border-primary bg-white rounded shadow-sm">
+                <div class="h-100 p-4 border-start border-5 border-primary bg-white rounded shadow-sm d-flex flex-column">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3 text-primary d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
                             <i class="fas fa-bolt fa-lg"></i>
@@ -286,7 +248,7 @@
             </div>
 
             <div class="col-md-6">
-                <div class="card-custom h-100 p-4 border-start border-5 border-success bg-white rounded shadow-sm">
+                <div class="h-100 p-4 border-start border-5 border-success bg-white rounded shadow-sm d-flex flex-column">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3 text-success d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
                             <i class="fas fa-wave-square fa-lg"></i>
@@ -350,17 +312,18 @@
                     <i class="fas fa-print me-2"></i> Print Protocol
                 </button>
             {% else %}
-                <button class="btn btn-secondary rounded-pill px-4" disabled title="Printing is disabled for your account">
+                <button class="btn btn-secondary rounded-pill px-4" disabled>
                     <i class="fas fa-lock me-2"></i> Print Locked
                 </button>
-                {% if not current_user.is_authenticated %}
-                    <p class="small text-muted mt-2">Please <a href="/login">login</a> to print.</p>
-                {% endif %}
+                <p class="small text-muted mt-2">
+                    Printing is disabled during the free trial and the first 24 hours of a paid subscription.
+                    <a href="/subscription" class="fw-bold">Upgrade now</a>.
+                </p>
             {% endif %}
         </div>
         
     </div>
-    {% elif request.method == 'POST' %}
+    {% elif request.method == 'POST' or request.args.get('disease') %}
         <div class="text-center py-5">
             <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
                 <i class="fas fa-search fa-3x text-primary opacity-50"></i>
@@ -372,11 +335,18 @@
 </div>
 
 <footer class="text-center text-muted mt-auto mb-0 pt-5 pb-4 border-top">
-    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> Disclaimer: For educational purposes only.</p>
-    <p class="small">Support: <a href="mailto:support@physioexpert.pro" class="text-decoration-none fw-bold text-cyan-theme">support@physioexpert.pro</a></p>
-    <p class="mb-1 fw-bold text-cyan-theme">© 2026 Physio Expert Pro</p>
+    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> {{ disclaimer }}</p>
+    <p class="small">Support: <a href="mailto:{{ support_email }}" class="text-decoration-none fw-bold">{{ support_email }}</a></p>
+    <p class="mb-1 fw-bold">© 2026 Physio Expert Pro</p>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js)"></script>
+<script>
+document.getElementById('searchForm')?.addEventListener('submit', function() {
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Searching...';
+});
+</script>
 </body>
 </html>
