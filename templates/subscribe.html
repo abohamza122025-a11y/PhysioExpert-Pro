@@ -1,40 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Subscription Required - Physio Expert Pro</title>
-    <link rel="stylesheet" href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)">
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f766e 0%, #0e4f8b 100%);
+        }
+        .brand { font-weight: 700; font-size: 15px; color: #0f766e; letter-spacing: .5px; }
+        .plan-card {
+            width: 100%;
+            max-width: 480px;
+            border: 0;
+            border-radius: 20px;
+            padding: 40px 36px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, .25);
+        }
+        .lock-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #e6f6f4;
+            color: #0f766e;
+            font-size: 30px;
+        }
+        .plan-card h1 { font-size: 26px; font-weight: 700; color: #0f172a; }
+        .price-box {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+        }
+        .price { font-size: 34px; font-weight: 700; color: #0f766e; line-height: 1.1; }
+        .price small { font-size: 15px; font-weight: 500; color: #64748b; }
+        .pay-box {
+            border: 1.5px dashed #0f766e;
+            background: #f0fdfa;
+            border-radius: 14px;
+            padding: 18px;
+        }
+        .pay-label { font-size: 13px; font-weight: 600; color: #334155; }
+        .pay-address { font-size: 20px; font-weight: 700; color: #0f766e; word-break: break-all; }
+        .btn-brand {
+            padding: 14px;
+            background: linear-gradient(135deg, #0f766e, #0e7490);
+            color: #fff;
+            border: 0;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .btn-brand:hover {
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(15, 118, 110, .35);
+        }
+        .footer-link { color: #64748b; text-decoration: none; font-size: 14px; }
+        .footer-link:hover { color: #0f766e; text-decoration: underline; }
+    </style>
 </head>
-<body class="bg-dark text-white d-flex align-items-center justify-content-center min-vh-100 text-center py-4">
-    <div class="container">
-        <div class="display-1 text-warning mb-3"><i class="fa-solid fa-lock"></i></div>
-        <h1 class="fw-bold display-5 mb-3">Upgrade to Monthly Plan</h1>
-        <p class="lead mb-4">Get full access to all protocols and PDF printing (unlocked 24 hours after activation).</p>
-        
-        <div class="card bg-secondary text-white mx-auto shadow-lg" style="max-width: 520px; border: 2px solid #ffc107;">
-            <div class="card-body p-4 p-md-5">
-                <h2 class="mb-4">Subscription Fee: <span class="text-warning fw-bold">{{ monthly_price }} EGP / Month</span></h2>
-                
-                <hr class="border-light">
+<body class="d-flex align-items-center justify-content-center p-3">
+    <div class="card plan-card text-center">
+        <div class="brand mb-3">PhysioExpert Pro</div>
 
-                <div class="d-grid gap-3 mt-4">
-                    <div class="bg-white text-dark p-3 rounded">
-                        <div class="fw-bold fs-5 mb-1"><i class="fa-solid fa-mobile-screen me-2 text-primary"></i> InstaPay Address</div>
-                        <div class="fs-4 fw-bold text-success user-select-all">{{ instapay_address }}</div>
-                        <small class="text-muted d-block mt-1">Send payment receipt and your registered email to activate</small>
-                    </div>
+        <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+        <h1 class="mb-2">Upgrade to Monthly Plan</h1>
+        <p class="text-secondary small mb-4">
+            Get full access to all protocols and PDF printing (unlocked 24 hours after activation).
+        </p>
 
-                    <a href="mailto:{{ support_email }}?subject=Physio%20Expert%20Pro%20Subscription&body=Registered%20Email%3A%0APlease%20find%20attached%20my%20InstaPay%20transfer%20receipt." class="btn btn-warning btn-lg fw-bold text-dark">
-                        <i class="fa-solid fa-envelope me-2"></i> Send Receipt via Email
-                    </a>
-                </div>
-            </div>
+        <div class="price-box mb-3">
+            <div class="text-secondary small mb-1">Subscription Fee</div>
+            <div class="price">{{ monthly_price }} EGP <small>/ Month</small></div>
         </div>
-        
+
+        <div class="pay-box mb-3">
+            <div class="pay-label mb-1">
+                <i class="fa-solid fa-mobile-screen me-1"></i> InstaPay Address
+            </div>
+            <div class="pay-address user-select-all">{{ instapay_address }}</div>
+            <small class="text-muted d-block mt-2">
+                Send payment receipt and your registered email to activate
+            </small>
+        </div>
+
+        <a href="mailto:{{ support_email }}?subject=Physio%20Expert%20Pro%20Subscription&body=Registered%20Email%3A%0APlease%20find%20attached%20my%20InstaPay%20transfer%20receipt."
+           class="btn btn-brand w-100">
+            <i class="fa-solid fa-envelope me-2"></i> Send Receipt via Email
+        </a>
+
         <div class="mt-4 d-flex justify-content-center gap-3">
-            <a href="/" class="text-white-50 text-decoration-none">Back to Home</a>
-            <span>•</span>
-            <a href="/logout" class="text-white-50 text-decoration-none">Log out</a>
+            <a href="/" class="footer-link">Back to Home</a>
+            <span class="text-muted">•</span>
+            <a href="/logout" class="footer-link">Log out</a>
         </div>
     </div>
 </body>
