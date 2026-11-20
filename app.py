@@ -1,9 +1,11 @@
 import os
+import re
 import json
 import math
 import base64
 import hashlib
 from io import BytesIO
+from html.parser import HTMLParser
 from functools import wraps
 from datetime import datetime, timedelta
 
@@ -765,6 +767,378 @@ def export_data():
     )
 
 
+# ==========================================
+# قالب الإكسيل (تحميل + استيراد) - صف لكل تمرين
+# ==========================================
+COND_COLS = ['disease_name', 'category', 'keywords', 'description',
+             'estim_type', 'estim_params', 'estim_role',
+             'us_type', 'us_params', 'us_role',
+             'ex_frequency', 'ex_intensity', 'ex_progression', 'exercises_role',
+             'evidence_level', 'source_ref',
+             'diagnosis', 'manual_therapy', 'precautions', 'other_notes']
+EX_COLS = ['disease_name', 'phase', 'phase_goal', 'exercise', 'instructions', 'dosage']
+COND_WIDTHS = {'disease_name': 30, 'category': 16, 'keywords': 28, 'description': 55,
+               'estim_type': 20, 'estim_params': 38, 'estim_role': 28,
+               'us_type': 26, 'us_params': 50, 'us_role': 40,
+               'ex_frequency': 14, 'ex_intensity': 16, 'ex_progression': 30, 'exercises_role': 30,
+               'evidence_level': 14, 'source_ref': 28,
+               'diagnosis': 45, 'manual_therapy': 45, 'precautions': 45, 'other_notes': 35}
+EX_WIDTHS = {'disease_name': 30, 'phase': 26, 'phase_goal': 30, 'exercise': 28,
+             'instructions': 60, 'dosage': 22}
+NOTE_HEADS = [('Diagnosis', 'diagnosis'), ('Manual Therapy', 'manual_therapy'),
+              ('Precautions', 'precautions')]
+
+
+def split_notes(t):
+    """يقسم نص الملاحظات إلى Diagnosis / Manual Therapy / Precautions / باقي."""
+    t = t or ''
+    found = []
+    for label, key in NOTE_HEADS:
+        m = re.search(r'(^|\n)\s*' + re.escape(label) + r'\s*:', t, re.I)
+        if m:
+            found.append((m.start(), m.end(), key))
+    out = {'diagnosis': '', 'manual_therapy': '', 'precautions': '', 'other_notes': ''}
+    if not found:
+        out['other_notes'] = t.strip()
+        return out
+    found.sort()
+    out['other_notes'] = t[:found[0][0]].strip()
+    for i, (s, e, key) in enumerate(found):
+        stop = found[i + 1][0] if i + 1 < len(found) else len(t)
+        out[key] = t[e:stop].strip()
+    return out
+
+
+def join_notes(diagnosis, manual, precautions, other):
+    parts = []
+    if other:
+        parts.append(other)
+    if diagnosis:
+        parts.append(f"Diagnosis: {diagnosis}")
+    if manual:
+        parts.append(f"Manual Therapy: {manual}")
+    if precautions:
+        parts.append(f"Precautions: {precautions}")
+    return "\n\n".join(parts)
+
+
+class _ExParser(HTMLParser):
+    """يحوّل HTML التمارين (h4 + li) إلى صفوف."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self.phase = ''
+        self._h4 = None
+        self._li = None
+        self._in = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'h4':
+            self._h4 = ''
+        elif tag == 'li':
+            self._li = {'b': '', 'i': '', 't': ''}
+        elif tag in ('b', 'i') and self._li is not None:
+            self._in = tag
+
+    def handle_endtag(self, tag):
+        if tag == 'h4' and self._h4 is not None:
+            self.phase = self._h4.strip()
+            self._h4 = None
+        elif tag in ('b', 'i'):
+            self._in = None
+        elif tag == 'li' and self._li is not None:
+            li, self._li = self._li, None
+            instr = re.sub(r'^\s*:\s*', '', li['t']).strip()
+            dose = re.sub(r'^\(|\)$', '', li['i'].strip()).strip()
+            self.rows.append((self.phase, li['b'].strip(), instr, dose))
+
+    def handle_data(self, data):
+        if self._h4 is not None:
+            self._h4 += data
+        elif self._li is not None:
+            if self._in == 'b':
+                self._li['b'] += data
+            elif self._in == 'i':
+                self._li['i'] += data
+            else:
+                self._li['t'] += data
+
+
+def exercises_to_rows(html_text):
+    s = html_text or ''
+    if not s.strip():
+        return []
+    if '<li' in s.lower():
+        p = _ExParser()
+        p.feed(s)
+        return [(ph or 'Phase 1', n, i, d) for ph, n, i, d in p.rows if n]
+    if '<' in s:
+        txt = re.sub(r'<br\s*/?>', '\n', s, flags=re.I)
+        txt = re.sub(r'<[^>]+>', '', txt).strip()
+        return [('Phase 1', txt, '', '')] if txt else []
+    return [('Phase 1', x.strip(), '', '') for x in s.split(',') if x.strip()]
+
+
+def rows_to_exercises_html(rows):
+    """صفوف الإكسيل -> نفس شكل HTML بتاع ملف JSON (مراحل + تمارين + جرعات)."""
+    order, groups = [], {}
+    for r in rows:
+        key = r.get('phase') or 'Exercises'
+        if key not in groups:
+            groups[key] = {'goal': '', 'items': []}
+            order.append(key)
+        if r.get('phase_goal') and not groups[key]['goal']:
+            groups[key]['goal'] = r['phase_goal']
+        groups[key]['items'].append(r)
+    html = ""
+    for key in order:
+        g = groups[key]
+        title = key + (f": {g['goal']}" if g['goal'] else '')
+        html += f"<h4>{escape(title)}</h4><ul>"
+        for r in g['items']:
+            html += f"<li><b>{escape(r['exercise'])}</b>"
+            if r.get('instructions'):
+                html += f": {escape(r['instructions'])}"
+            if r.get('dosage'):
+                html += f" <i>({escape(r['dosage'])})</i>"
+            html += "</li>"
+        html += "</ul><hr>"
+    return html
+
+
+def build_template_workbook(protocols):
+    """يبني ملف إكسيل جاهز للتعديل من بيانات الموقع الحالية."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+
+    font = Font(name='Arial', size=10)
+    head_font = Font(name='Arial', size=10, bold=True, color='FFFFFF')
+    head_fill = PatternFill('solid', start_color='1E3C72')
+    wrap = Alignment(wrap_text=True, vertical='top')
+
+    wb = Workbook()
+
+    # ---------- Guide ----------
+    g = wb.active
+    g.title = 'Guide'
+    g.sheet_view.rightToLeft = True
+    lines = [
+        ("دليل ملء الملف", True),
+        ("1) ورقة Conditions: صف لكل حالة (التعريف، الكهرباء، الملاحظات، المرجع...).", False),
+        ("2) ورقة Exercises: صف لكل تمرين. لإضافة تمرين جديد أضف صف جديد واكتب اسم الحالة (disease_name) بالظبط زي ما هو.", False),
+        ("3) المراحل: اكتب نفس اسم المرحلة في كل تمارينها (مثال: Phase 1: Freezing) وهتظهر في الموقع كأكورديون.", False),
+        ("4) الخلية الفاضية في Conditions = الموقع يحتفظ بالقيمة القديمة. الاستثناء: خانات الملاحظات (diagnosis و manual_therapy و precautions و other_notes) بتتجمع وتحل محل الملاحظات القديمة.", False),
+        ("5) لو الحالة ليها صفوف في Exercises، قائمة تمارينها القديمة بتتبدل بالكامل بالصفوف دي.", False),
+        ("6) اسم حالة جديد = حالة جديدة بتتضاف. تغيير اسم حالة موجودة = حالة جديدة، والقديمة تفضل زي ما هي.", False),
+        ("7) معاملات الـ Ultrasound اتركها كما هي، لأن القواعد الجاهزة في الموقع بتظبطها.", False),
+        ("8) بعد التعديل: لوحة الأدمن > Import Data > ارفع الملف.", False),
+        ("", False),
+        ("مثال لصف في ورقة Exercises (مثال فقط، لا يتم استيراده):", True),
+    ]
+    for i, (txt, bold) in enumerate(lines, start=1):
+        c = g.cell(row=i, column=1, value=txt)
+        c.font = Font(name='Arial', size=12 if bold else 10, bold=bold)
+        c.alignment = Alignment(wrap_text=True, vertical='top')
+    g.column_dimensions['A'].width = 110
+
+    ex_header_row = len(lines) + 2
+    for j, name in enumerate(EX_COLS, start=1):
+        c = g.cell(row=ex_header_row, column=j, value=name)
+        c.font = head_font
+        c.fill = head_fill
+    example = ['Adhesive Capsulitis', 'Phase 1: Freezing', 'Control pain and keep range',
+               'Pendulum (Codman)', 'Lean forward with support, let the arm hang and swing in small circles.',
+               '2 min, 3x/day']
+    for j, v in enumerate(example, start=1):
+        c = g.cell(row=ex_header_row + 1, column=j, value=v)
+        c.font = font
+        c.alignment = wrap
+    for j in range(2, len(EX_COLS) + 1):
+        g.column_dimensions[get_column_letter(j)].width = 28
+
+    # ---------- Conditions ----------
+    ws = wb.create_sheet('Conditions')
+    for j, name in enumerate(COND_COLS, start=1):
+        c = ws.cell(row=1, column=j, value=name)
+        c.font = head_font
+        c.fill = head_fill
+        ws.column_dimensions[get_column_letter(j)].width = COND_WIDTHS.get(name, 24)
+    ws.freeze_panes = 'B2'
+
+    # ---------- Exercises ----------
+    we = wb.create_sheet('Exercises')
+    for j, name in enumerate(EX_COLS, start=1):
+        c = we.cell(row=1, column=j, value=name)
+        c.font = head_font
+        c.fill = head_fill
+        we.column_dimensions[get_column_letter(j)].width = EX_WIDTHS.get(name, 24)
+    we.freeze_panes = 'B2'
+
+    r_c, r_e = 2, 2
+    for p in protocols:
+        notes = split_notes(p.notes)
+        values = {
+            'disease_name': p.disease_name, 'category': p.category, 'keywords': p.keywords,
+            'description': p.description, 'estim_type': p.estim_type, 'estim_params': p.estim_params,
+            'estim_role': p.estim_role, 'us_type': p.us_type, 'us_params': p.us_params,
+            'us_role': p.us_role, 'ex_frequency': p.ex_frequency, 'ex_intensity': p.ex_intensity,
+            'ex_progression': p.ex_progression, 'exercises_role': p.exercises_role,
+            'evidence_level': p.evidence_level, 'source_ref': p.source_ref, **notes,
+        }
+        for j, name in enumerate(COND_COLS, start=1):
+            c = ws.cell(row=r_c, column=j, value=values.get(name) or None)
+            c.font = font
+            c.alignment = wrap
+        r_c += 1
+
+        for ph, ex_name, instr, dose in exercises_to_rows(p.exercises_list):
+            for j, v in enumerate([p.disease_name, ph, None, ex_name, instr or None, dose or None], start=1):
+                c = we.cell(row=r_e, column=j, value=v)
+                c.font = font
+                c.alignment = wrap
+            r_e += 1
+
+    out = BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return out
+
+
+def _cell(v):
+    if v is None:
+        return ''
+    try:
+        if pd.isna(v):
+            return ''
+    except Exception:
+        pass
+    s = str(v).strip()
+    return '' if s.lower() == 'nan' else s
+
+
+def parse_template_workbook(xls):
+    """يقرا ورقتين Conditions و Exercises ويرجّع (conditions, exercises_by_name)."""
+    cond = xls.parse('Conditions', dtype=str)
+    ex = xls.parse('Exercises', dtype=str)
+    cond.columns = [str(c).strip() for c in cond.columns]
+    ex.columns = [str(c).strip() for c in ex.columns]
+
+    conditions = []
+    for _, r in cond.iterrows():
+        d = {c: _cell(r.get(c)) for c in COND_COLS}
+        if d['disease_name']:
+            conditions.append(d)
+
+    ex_map = {}
+    for _, r in ex.iterrows():
+        name = _cell(r.get('disease_name'))
+        exercise = _cell(r.get('exercise'))
+        if not name or not exercise:
+            continue
+        ex_map.setdefault(name.lower(), []).append({
+            'phase': _cell(r.get('phase')), 'phase_goal': _cell(r.get('phase_goal')),
+            'exercise': exercise, 'instructions': _cell(r.get('instructions')),
+            'dosage': _cell(r.get('dosage')),
+        })
+    return conditions, ex_map
+
+
+def _import_template_workbook(xls):
+    conditions, ex_map = parse_template_workbook(xls)
+    simple = ['category', 'keywords', 'description', 'estim_type', 'estim_params', 'estim_role',
+              'us_type', 'us_params', 'us_role', 'ex_frequency', 'ex_intensity', 'ex_progression',
+              'exercises_role', 'evidence_level', 'source_ref']
+    created = updated = 0
+    handled = set()
+
+    for d in conditions:
+        name = d['disease_name']
+        handled.add(name.lower())
+        p = Protocol.query.filter(db.func.lower(Protocol.disease_name) == name.lower()).first()
+        is_new = p is None
+        if is_new:
+            p = Protocol(disease_name=name, category='General')
+            db.session.add(p)
+            created += 1
+        else:
+            updated += 1
+
+        for col in simple:
+            if d[col]:
+                setattr(p, col, d[col])
+
+        if any(d[k] for k in ('diagnosis', 'manual_therapy', 'precautions', 'other_notes')):
+            p.notes = join_notes(d['diagnosis'], d['manual_therapy'], d['precautions'], d['other_notes'])
+
+        rows = ex_map.get(name.lower())
+        if rows:
+            p.exercises_list = rows_to_exercises_html(rows)
+
+        if is_new:
+            if not p.keywords:
+                p.keywords = f"{name}, {p.category}"
+            if not p.us_params:
+                apply_us_rule(p)
+
+    orphans = sorted(set(ex_map) - handled)
+    return created, updated, orphans
+
+
+def _import_legacy_df(df):
+    """الشكل القديم: صف واحد لكل حالة (CSV أو ورقة واحدة)."""
+    df.columns = df.columns.str.strip()
+
+    def get_val(row, col_name):
+        val = row.get(col_name)
+        return "" if (pd.isna(val) or str(val).strip() == 'nan') else str(val).strip()
+
+    updated = created = 0
+    for _, row in df.iterrows():
+        d_name = get_val(row, 'disease_name')
+        if not d_name:
+            continue
+
+        p = Protocol.query.filter_by(disease_name=d_name).first()
+        if not p:
+            p = Protocol(disease_name=d_name)
+            db.session.add(p)
+            created += 1
+        else:
+            updated += 1
+
+        p.category = get_val(row, 'category') or 'General'
+        p.keywords = get_val(row, 'keywords')
+        p.description = get_val(row, 'description')
+        p.source_ref = get_val(row, 'source_ref')
+        p.estim_params = get_val(row, 'estim_params')
+        p.estim_type = "Electrical Stimulation"
+        p.us_params = get_val(row, 'us_params')
+        p.us_type = "Ultrasound"
+        p.exercises_list = get_val(row, 'exercises_list')
+        p.exercises_role = get_val(row, 'exercises_role')
+        p.ex_frequency = get_val(row, 'ex_frequency')
+        p.ex_intensity = get_val(row, 'ex_intensity')
+        p.ex_progression = get_val(row, 'ex_progression')
+        p.evidence_level = get_val(row, 'evidence_level')
+        if not p.us_params:
+            apply_us_rule(p)
+    return created, updated
+
+
+@app.route('/admin/download-template')
+@admin_required
+def download_template():
+    protocols = Protocol.query.order_by(Protocol.category, Protocol.disease_name).all()
+    out = build_template_workbook(protocols)
+    return send_file(
+        out,
+        download_name='physio_protocols_template.xlsx',
+        as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
 @app.route('/admin/import-excel', methods=['POST'])
 @admin_required
 def import_excel():
@@ -778,57 +1152,20 @@ def import_excel():
         return redirect(url_for('admin_dashboard'))
 
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file)
+        orphans = []
+        if file.filename.lower().endswith('.csv'):
+            created, updated = _import_legacy_df(pd.read_csv(file))
         else:
-            df = pd.read_excel(file)
-
-        df.columns = df.columns.str.strip()
-
-        def get_val(row, col_name):
-            val = row.get(col_name)
-            return "" if (pd.isna(val) or str(val).strip() == 'nan') else str(val).strip()
-
-        updated = 0
-        created = 0
-
-        for _, row in df.iterrows():
-            d_name = get_val(row, 'disease_name')
-            if not d_name:
-                continue
-
-            p = Protocol.query.filter_by(disease_name=d_name).first()
-            if not p:
-                p = Protocol(disease_name=d_name)
-                db.session.add(p)
-                created += 1
+            xls = pd.ExcelFile(file)
+            if 'Conditions' in xls.sheet_names and 'Exercises' in xls.sheet_names:
+                created, updated, orphans = _import_template_workbook(xls)
             else:
-                updated += 1
-
-            p.category = get_val(row, 'category') or 'General'
-            p.keywords = get_val(row, 'keywords')
-            p.description = get_val(row, 'description')
-            p.source_ref = get_val(row, 'source_ref')
-
-            p.estim_params = get_val(row, 'estim_params')
-            p.estim_type = "Electrical Stimulation"
-            p.us_params = get_val(row, 'us_params')
-            p.us_type = "Ultrasound"
-
-            p.exercises_list = get_val(row, 'exercises_list')
-            p.exercises_role = get_val(row, 'exercises_role')
-
-            p.ex_frequency = get_val(row, 'ex_frequency')
-            p.ex_intensity = get_val(row, 'ex_intensity')
-            p.ex_progression = get_val(row, 'ex_progression')
-            p.evidence_level = get_val(row, 'evidence_level')
-
-            # لو ملف الإكسل مفيهوش معاملات Ultrasound نطبّق القاعدة الجاهزة
-            if not p.us_params:
-                apply_us_rule(p)
+                created, updated = _import_legacy_df(xls.parse(xls.sheet_names[0]))
 
         db.session.commit()
         flash(f'Done! Created {created}, Updated {updated} protocols.', 'success')
+        if orphans:
+            flash('Exercises ignored (name not found in Conditions sheet): ' + ', '.join(orphans[:10]), 'warning')
 
     except Exception as e:
         db.session.rollback()
