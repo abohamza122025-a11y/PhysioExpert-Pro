@@ -4,6 +4,7 @@ werkzeug
 gunicorn
 flask-sqlalchemy
 flask-mail
+psycopg[binary]
 psycopg2-binary
 pandas
 openpyxl
