@@ -665,26 +665,27 @@ def add_manual():
             encoded_string = base64.b64encode(file.read()).decode('utf-8')
             image_data = f"data:image/jpeg;base64,{encoded_string}"
 
+    f = request.form
     p = Protocol(
-        disease_name=request.form['disease_name'],
-        category=request.form.get('category', 'General'),
-        keywords=request.form['keywords'],
-        description=request.form['description'],
-        estim_type=request.form['estim_type'],
-        estim_params=request.form['estim_params'],
-        estim_role=request.form['estim_role'],
-        us_type=request.form['us_type'],
-        us_params=request.form['us_params'],
-        us_role=request.form['us_role'],
-        exercises_list=request.form['exercises_list'],
-        exercises_role=request.form['exercises_role'],
-        ex_frequency=request.form.get('ex_frequency'),
-        ex_intensity=request.form.get('ex_intensity'),
-        ex_progression=request.form.get('ex_progression'),
-        evidence_level=request.form.get('evidence_level', 'Grade A'),
-        source_ref=request.form['source_ref'],
-        video_link=request.form.get('video_link'),
-        notes=request.form.get('notes'),
+        disease_name=f['disease_name'],
+        category=f.get('category', 'General'),
+        keywords=f.get('keywords', ''),
+        description=f.get('description', ''),
+        estim_type=f.get('estim_type', ''),
+        estim_params=f.get('estim_params', ''),
+        estim_role=f.get('estim_role', ''),
+        us_type=f.get('us_type', ''),
+        us_params=f.get('us_params', ''),
+        us_role=f.get('us_role', ''),
+        exercises_list=f.get('exercises_list', ''),
+        exercises_role=f.get('exercises_role', ''),
+        ex_frequency=f.get('ex_frequency'),
+        ex_intensity=f.get('ex_intensity'),
+        ex_progression=f.get('ex_progression'),
+        evidence_level=f.get('evidence_level', 'Grade A'),
+        source_ref=f.get('source_ref', ''),
+        video_link=f.get('video_link'),
+        notes=f.get('notes'),
         electrode_image=image_data
     )
     db.session.add(p)
