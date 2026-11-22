@@ -1,3 +1,4 @@
+
 flask
 flask-login
 werkzeug
@@ -9,3 +10,4 @@ psycopg2-binary
 pandas
 openpyxl
 google-generativeai
+bleach==6.2.0
