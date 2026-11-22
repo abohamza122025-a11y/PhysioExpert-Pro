@@ -1305,19 +1305,62 @@ def forgot_password():
     return render_template('forgot_password.html')
 
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
     if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+
+        if not email or not password:
+            flash('Please enter your email and password.', 'danger')
+            return render_template('register.html')
+
+        existing_user = User.query.filter_by(email=email).first()
+
+        if existing_user:
+            flash(
+                'This email is already registered. Please log in.',
+                'danger'
+            )
+            return render_template('register.html')
+
         try:
-            pw = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
-            db.session.add(User(email=request.form['email'], password=pw))
+            hashed_password = generate_password_hash(
+                password,
+                method='pbkdf2:sha256'
+            )
+
+            user = User(
+                email=email,
+                password=hashed_password
+            )
+
+            db.session.add(user)
             db.session.commit()
-            return redirect(url_for('login'))
+
+            login_user(user)
+
+            flash(
+                'Your account has been created successfully!',
+                'success'
+            )
+
+            return redirect(url_for('home'))
+
         except Exception:
             db.session.rollback()
-            flash('Email already exists', 'danger')
-    return render_template('register.html')
+            app.logger.exception('Registration failed')
 
+            flash(
+                'An error occurred while creating your account. Please try again.',
+                'danger'
+            )
+
+    return render_template('register.html')
 
 @app.route('/logout')
 @login_required
