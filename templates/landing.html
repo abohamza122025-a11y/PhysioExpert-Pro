@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Physio Expert Pro | بروتوكولات العلاج الطبيعي في ثوانٍ</title>
 <meta name="description" content="ابحث باسم الحالة أو التشخيص واحصل على برنامج علاج طبيعي متكامل. مخصص لأخصائيي وطلبة العلاج الطبيعي. جرّب مجانًا.">
-<link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-<link href="[https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap)" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --blue:#0d6efd; --cyan:#0dcaf0; --yellow:#ffc107; --ink:#1b2430; --muted:#5b6675;
@@ -29,6 +29,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .btn-yellow:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(255,193,7,.4)}
 .btn-outline{border:2px solid var(--blue);color:var(--blue);background:#fff}
 .btn-outline:hover{background:var(--blue);color:#fff}
+.btn-white{background:#fff;color:var(--blue)}
 
 /* hero */
 .hero{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;padding:80px 0 90px;text-align:center}
@@ -38,8 +39,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .search input{flex:1;border:0;outline:0;padding:0 18px;font-family:inherit;font-size:1rem;background:transparent;color:var(--ink);min-width:0}
 .hero .note{font-size:.95rem;opacity:.9}
 .chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
-.chips button{background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35);padding:5px 16px;border-radius:999px;font-size:.9rem;direction:ltr;cursor:pointer;font-family:'Poppins',sans-serif;transition:.2s}
-.chips button:hover{background:#fff;color:var(--blue)}
+.chips span{background:rgba(255,255,255,.18);padding:4px 16px;border-radius:999px;font-size:.9rem;direction:ltr}
 
 /* sections */
 section{padding:72px 0}
@@ -61,7 +61,7 @@ h2{font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;text-align:center;margin
 .pill{display:inline-block;background:#dbe8ff;color:var(--blue);font-size:.75rem;font-weight:700;padding:3px 14px;border-radius:999px}
 .pill.gray{background:#f0f2f5;color:#6b7280;font-size:.85rem;font-weight:600}
 .top-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.sample-badge{background:#fff3cd;color:#856404;border:1px solid #ffe69c;font-weight:600;font-size:.85rem;padding:6px 16px;border-radius:999px}
+.printbtn{background:var(--red);color:#fff;font-weight:600;font-size:.9rem;padding:8px 20px;border-radius:999px}
 .blk{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(20,40,80,.06);margin-bottom:16px}
 .blk-h{background:linear-gradient(90deg,var(--blue),var(--cyan));color:#fff;font-weight:600;padding:14px 22px;font-size:1rem}
 .blk-b{padding:20px 24px}
@@ -143,18 +143,12 @@ footer a:hover{color:var(--blue)}
   <div class="wrap">
     <h1>اكتب اسم الحالة…<br>واحصل على برنامج علاجي متكامل</h1>
     <p class="sub">منصة لأخصائيي وطلبة العلاج الطبيعي. ابحث بالمرض أو التشخيص وخد بروتوكول منظم خطوة بخطوة بدل ما تضيع وقتك بين المراجع.</p>
-    <form class="search" id="heroSearchForm" action="/register" method="get">
-      <input type="text" id="heroSearchInput" name="disease" placeholder="مثال: ACL, Stroke, Frozen Shoulder..." aria-label="ابحث عن حالة">
+    <form class="search" action="/register" method="get">
+      <input type="text" placeholder="مثال: ACL, Stroke, Frozen Shoulder..." aria-label="ابحث عن حالة">
       <button class="btn btn-yellow" type="submit">ابدأ البحث</button>
     </form>
     <p class="note">تجربة مجانية 30 يومًا • إلغاء واسترداد خلال 24 ساعة من الاشتراك</p>
-    <div class="chips">
-      <button type="button" onclick="quickSearch('ACL')">ACL</button>
-      <button type="button" onclick="quickSearch('Stroke')">Stroke</button>
-      <button type="button" onclick="quickSearch('Low Back Pain')">Low Back Pain</button>
-      <button type="button" onclick="quickSearch('Rotator Cuff')">Rotator Cuff</button>
-      <button type="button" onclick="quickSearch('Knee OA')">Knee OA</button>
-    </div>
+    <div class="chips"><span>ACL</span><span>Stroke</span><span>Low Back Pain</span><span>Rotator Cuff</span><span>Knee OA</span></div>
   </div>
 </header>
 
@@ -178,7 +172,7 @@ footer a:hover{color:var(--blue)}
       <div class="card"><div class="ic">🔎</div><h3>بحث سريع</h3><p>نتيجة في ثواني بمجرد كتابة اسم الحالة.</p></div>
       <div class="card"><div class="ic">📋</div><h3>برنامج متكامل</h3><p>مراحل واضحة من التقييم للتأهيل والعودة للنشاط.</p></div>
       <div class="card"><div class="ic">🎓</div><h3>للطلبة والأخصائيين</h3><p>مناسب للمذاكرة والتدريب العملي والمراجعة السريعة.</p></div>
-      <div class="card"><div class="ic">📚</div><h3>مبني على مصادر</h3><p>البروتوكولات مستندة إلى إرشادات سريرية معتمدة (مثل JOSPT وAPTA) ومراجع علمية محكّمة.</p></div>
+      <div class="card"><div class="ic">📚</div><h3>مبني على مصادر</h3><p>[اكتب هنا: البروتوكولات مبنية على guidelines وأبحاث منشورة، مع ذكر المراجع]</p></div>
       <div class="card"><div class="ic">📱</div><h3>على أي جهاز</h3><p>موبايل أو لابتوب، من العيادة أو من البيت.</p></div>
       <div class="card"><div class="ic">💰</div><h3>سعر رمزي</h3><p>اشتراك شهري في متناول الطالب والأخصائي.</p></div>
     </div>
@@ -198,8 +192,8 @@ footer a:hover{color:var(--blue)}
           <h3>Stroke (Hemiplegia)</h3>
         </div>
         <div class="top-r">
-          <span class="pill gray">Neurology</span>
-          <span class="sample-badge">Sample Preview</span>
+          <span class="pill gray">Stroke (Hemiplegia)</span>
+          <span class="printbtn">Print</span>
         </div>
       </div>
 
@@ -233,31 +227,31 @@ footer a:hover{color:var(--blue)}
 
           <div class="ex">
             <h4>Passive Range of Motion (PROM)</h4>
-            <p>Carefully move all affected joints through their full available range of motion, ensuring no pain or undue stress. Focus on the shoulder (to prevent subluxation and pain), elbow, wrist, hip, knee, and ankle.</p>
+            <p>: Carefully move all affected joints through their full available range of motion, ensuring no pain or undue stress. Focus on the shoulder (to prevent subluxation and pain), elbow, wrist, hip, knee, and ankle.</p>
             <span class="dose">(10-15 repetitions per joint, 2-3 times per day.)</span>
           </div>
 
           <div class="ex">
             <h4>Assisted Active Range of Motion (AAROM)</h4>
-            <p>Encourage the patient to initiate movement with the paretic limb while the therapist or unaffected limb provides assistance to complete the range. Focus on movements with early motor return, such as shoulder flexion, elbow flexion/extension, and ankle dorsiflexion.</p>
+            <p>: Encourage the patient to initiate movement with the paretic limb while the therapist or unaffected limb provides assistance to complete the range. Focus on movements with early motor return, such as shoulder flexion, elbow flexion/extension, and ankle dorsiflexion.</p>
             <span class="dose">(10-15 repetitions per movement, 2-3 times per day.)</span>
           </div>
 
           <div class="ex">
             <h4>Bridging (Assisted)</h4>
-            <p>From a supine position with knees bent and feet flat, instruct the patient to lift their hips off the bed. Provide manual assistance at the pelvis as needed. Focus on gluteal and hamstring activation, and trunk stability.</p>
+            <p>: From a supine position with knees bent and feet flat, instruct the patient to lift their hips off the bed. Provide manual assistance at the pelvis as needed. Focus on gluteal and hamstring activation, and trunk stability.</p>
             <span class="dose">(10-15 repetitions, 2-3 times per day, holding for 3-5 seconds if possible.)</span>
           </div>
 
           <div class="ex">
             <h4>Bed Mobility: Rolling</h4>
-            <p>Practice rolling from supine to side-lying towards both the affected and unaffected sides. Use visual cues, upper limb movements, and lower limb push-off as appropriate. Progress to independent rolling.</p>
+            <p>: Practice rolling from supine to side-lying towards both the affected and unaffected sides. Use visual cues, upper limb movements, and lower limb push-off as appropriate. Progress to independent rolling.</p>
             <span class="dose">(5-10 repetitions per side, 2-3 times per day.)</span>
           </div>
 
           <div class="ex">
             <h4>Supported Sitting Balance</h4>
-            <p>Progress from sitting with full trunk support to unsupported sitting, initially with feet supported. Focus on maintaining an upright posture, head control, and reacting to small perturbations. Encourage weight shifting within the base of support.</p>
+            <p>: Progress from sitting with full trunk support to unsupported sitting, initially with feet supported. Focus on maintaining an upright posture, head control, and reacting to small perturbations. Encourage weight shifting within the base of support.</p>
             <span class="dose">(5-15 minutes, 2-3 times per day, gradually increasing duration and decreasing support.)</span>
           </div>
         </div>
@@ -287,14 +281,14 @@ footer a:hover{color:var(--blue)}
       <div class="plan best">
         <div class="badge">الأكثر اختيارًا</div>
         <h3>الاشتراك الشهري</h3>
-        <div class="price">{{ monthly_price }} <small>جنيه / شهريًا</small></div>
+        <div class="price">150 <small>جنيه / شهريًا</small></div>
         <ul>
           <li>كل البروتوكولات بدون حدود</li>
           <li>طباعة البرامج بعد مرور أول 24 ساعة</li>
           <li>إلغاء واسترداد المبلغ خلال 24 ساعة</li>
           <li>الدفع عبر InstaPay</li>
         </ul>
-        <a href="mailto:{{ support_email }}?subject=%D8%B7%D9%84%D8%A8%20%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20Physio%20Expert%20Pro&body=%D8%A7%D9%84%D8%A7%D8%B3%D9%85%3A%0A%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%91%D9%84%20%D8%B9%D9%84%D9%89%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9%3A%0A%D9%85%D8%B1%D9%81%D9%82%20%D8%A5%D9%8A%D8%B5%D8%A7%D9%84%20%D8%A7%D9%84%D8%AA%D8%AD%D9%88%D9%8A%D9%84%20%D8%B9%D8%A8%D8%B1%20InstaPay." class="btn btn-yellow">اشترك الآن</a>
+        <a href="mailto:physioexpert8@gmail.com?subject=%D8%B7%D9%84%D8%A8%20%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20Physio%20Expert%20Pro&body=%D8%A7%D9%84%D8%A7%D8%B3%D9%85%3A%0A%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%91%D9%84%20%D8%B9%D9%84%D9%89%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9%3A%0A%D9%85%D8%B1%D9%81%D9%82%20%D8%A5%D9%8A%D8%B5%D8%A7%D9%84%20%D8%A7%D9%84%D8%AA%D8%AD%D9%88%D9%8A%D9%84%20%D8%B9%D8%A8%D8%B1%20InstaPay." class="btn btn-yellow">اشترك الآن</a>
       </div>
     </div>
   </div>
@@ -308,8 +302,8 @@ footer a:hover{color:var(--blue)}
     <details><summary>إيه اللي بيحصل بعد انتهاء التجربة المجانية؟</summary><p>الحساب بيفضل موجود، وتقدر تشترك اشتراك شهري للاستمرار. مفيش خصم تلقائي من غير موافقتك.</p></details>
     <details><summary>أقدر ألغي الاشتراك وأسترد فلوسي؟</summary><p>أيوه. تقدر تلغي الاشتراك خلال 24 ساعة من الاشتراك وتسترد المبلغ كاملًا.</p></details>
     <details><summary>أقدر أطبع البرنامج؟</summary><p>الطباعة غير متاحة خلال التجربة المجانية ولا خلال أول 24 ساعة من الاشتراك (فترة الاسترداد)، وتتفعّل بعد انتهائها.</p></details>
-    <details><summary>إزاي أشترك وأدفع؟</summary><p>الدفع عبر <b dir="ltr">InstaPay</b> على العنوان: <b dir="ltr">{{ instapay_address }}</b> ({{ monthly_price }} جنيه شهريًا). بعد التحويل ابعت إيصال التحويل والإيميل المسجّل على الموقع إلى <a href="mailto:{{ support_email }}" style="color:var(--blue);font-weight:700" dir="ltr">{{ support_email }}</a> وهنفعّل اشتراكك.</p></details>
-    <details><summary>أتواصل مع الدعم إزاي؟</summary><p>راسلنا على <a href="mailto:{{ support_email }}" style="color:var(--blue);font-weight:700" dir="ltr">{{ support_email }}</a></p></details>
+    <details><summary>إزاي أشترك وأدفع؟</summary><p>الدفع عبر <b dir="ltr">InstaPay</b> على العنوان: <b dir="ltr">mahmoudelseleimy@instapay</b> (150 جنيه شهريًا). بعد التحويل ابعت إيصال التحويل والإيميل المسجّل على الموقع إلى <a href="mailto:physioexpert8@gmail.com?subject=%D8%B7%D9%84%D8%A8%20%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20Physio%20Expert%20Pro&body=%D8%A7%D9%84%D8%A7%D8%B3%D9%85%3A%0A%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D9%8A%D9%84%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%91%D9%84%20%D8%B9%D9%84%D9%89%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9%3A%0A%D9%85%D8%B1%D9%81%D9%82%20%D8%A5%D9%8A%D8%B5%D8%A7%D9%84%20%D8%A7%D9%84%D8%AA%D8%AD%D9%88%D9%8A%D9%84%20%D8%B9%D8%A8%D8%B1%20InstaPay." style="color:var(--blue);font-weight:700" dir="ltr">physioexpert8@gmail.com</a> وهنفعّل اشتراكك.</p></details>
+    <details><summary>أتواصل مع الدعم إزاي؟</summary><p>راسلنا على <a href="mailto:physioexpert8@gmail.com" style="color:var(--blue);font-weight:700" dir="ltr">physioexpert8@gmail.com</a></p></details>
   </div>
 </section>
 
@@ -324,18 +318,10 @@ footer a:hover{color:var(--blue)}
 <footer>
   <div class="wrap">
     <div class="disc">⚠ تنبيه: المحتوى للأغراض التعليمية فقط.</div>
-    <div class="links"><a href="/terms">الشروط والأحكام</a><a href="/privacy">سياسة الخصوصية</a><a href="mailto:{{ support_email }}">الدعم</a></div>
+    <div class="links"><a href="/terms">الشروط والأحكام</a><a href="/privacy">سياسة الخصوصية</a><a href="mailto:physioexpert8@gmail.com">الدعم</a></div>
     <div>© 2026 Physio Expert Pro</div>
   </div>
 </footer>
 
-<script>
-function quickSearch(term) {
-  const input = document.getElementById('heroSearchInput');
-  const form = document.getElementById('heroSearchForm');
-  input.value = term;
-  form.submit();
-}
-</script>
 </body>
 </html>
