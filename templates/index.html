@@ -1,135 +1,163 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physio Expert Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: 'Cairo', sans-serif;
-            background-color: #f4f7fb;
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+   <style>
+        /* تنسيقات الصفحة العامة */
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #f8f9fa; 
             margin: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
-
-        /* ---------- Hero ---------- */
-        .hero-section {
-            background: linear-gradient(135deg, #0d6efd, #0dcaf0);
-            color: white;
-            padding: 50px 20px 90px;
+        
+        /* الهيرو سكشن (الجزء الأزرق) */
+        .hero-section { 
+            background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
+            color: white; 
+            padding: 60px 20px 100px;
             border-radius: 0 0 40px 40px;
             box-shadow: 0 10px 30px rgba(13, 110, 253, 0.15);
             text-align: center;
         }
 
-        /* ---------- Result header ---------- */
-        .result-header {
-            background: #fff;
-            border: 1px solid #e6ecf5;
-            border-radius: 18px;
-            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.06);
-            padding: 22px 26px;
-        }
-        .result-header h2 { font-size: 1.8rem; letter-spacing: -0.3px; }
-
-        .status-pill {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: #fff; border: 1px solid #dbe6f7; color: #0b5ed7;
-            border-radius: 50px; padding: 4px 14px; font-size: .8rem; font-weight: 600;
+        /* كارت البحث */
+        .search-card {
+            background-color: white;
+            width: 90%;
+            max-width: 600px;
+            margin: -60px auto 30px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            position: relative;
         }
 
-        .print-hint {
-            font-size: .82rem; color: #6c757d; background: #fff8e6;
-            border: 1px dashed #ffd36b; border-radius: 12px; padding: 8px 14px; margin-top: 12px;
+        .form-control {
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            font-size: 16px;
+            margin-bottom: 15px;
         }
 
-        /* ---------- At a glance ---------- */
-        .glance-card {
-            background: #fff; border: 1px solid #e6ecf5; border-radius: 14px;
-            padding: 14px 16px; height: 100%; display: flex; align-items: center; gap: 12px;
-        }
-        .glance-icon {
-            width: 42px; height: 42px; border-radius: 12px; display: flex;
-            align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;
-        }
-        .glance-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; color: #8a94a6; font-weight: 600; }
-        .glance-value { font-size: .92rem; font-weight: 600; color: #1e2a3a; line-height: 1.25; }
-
-        /* ---------- Tabs ---------- */
-        .protocol-tabs {
-            background: #fff; border: 1px solid #e6ecf5; border-radius: 50px;
-            padding: 6px; display: flex; gap: 4px; flex-wrap: wrap;
-        }
-        .protocol-tabs .nav-link {
-            border-radius: 50px; color: #51607a; font-weight: 600; font-size: .9rem; padding: 8px 18px;
-        }
-        .protocol-tabs .nav-link.active {
-            background: linear-gradient(135deg, #0d6efd, #0dcaf0); color: #fff;
-            box-shadow: 0 4px 12px rgba(13, 110, 253, .25);
+        .form-control:focus {
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+            border-color: #0d6efd;
         }
 
-        .panel-card {
-            background: #fff; border: 1px solid #e6ecf5; border-radius: 16px;
-            box-shadow: 0 4px 14px rgba(20, 40, 80, 0.04);
+        /* =========================================
+           تنسيق المحتوى الطبي (التمارين والملاحظات)
+           ========================================= */
+        .protocol-content {
+            font-size: 1rem;
+            color: #333;
         }
-        .panel-title { font-weight: 700; color: #1e3c72; font-size: 1.02rem; }
-
-        /* ---------- Parameter chips ---------- */
-        .param-chip {
-            display: inline-block; background: #eef4ff; color: #0b3d91; border: 1px solid #d3e2ff;
-            border-radius: 8px; padding: 4px 10px; font-size: .82rem; font-weight: 500; margin: 0 6px 6px 0;
+        
+        /* عناوين المراحل (Phase 1, Phase 2...) */
+        .protocol-content h4 {
+            color: #0d6efd;
+            font-weight: 700;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 1.2rem;
         }
-        .param-chip.green { background: #eafaf1; color: #146c43; border-color: #c5ecd6; }
 
-        .modality-card { border-radius: 16px; background: #fff; border: 1px solid #e6ecf5; height: 100%; }
-        .modality-card.warn { background: #fff8f0; border-color: #ffd9b0; }
+        /* قوائم التمارين */
+        .protocol-content ul {
+            list-style: none; /* إخفاء النقاط العادية */
+            padding-left: 0;
+        }
 
-        /* ---------- التمارين العلاجية ---------- */
-        .protocol-content { font-size: .95rem; color: #333; }
-        .protocol-content ul { list-style: none; padding-left: 0; margin: 0; }
+        /* عنصر التمرين الواحد */
         .protocol-content li {
-            position: relative; background: #fff; border: 1px solid #edf1f7;
-            border-left: 4px solid #0dcaf0; border-radius: 10px;
-            padding: 10px 14px; margin-bottom: 8px; line-height: 1.55;
+            position: relative;
+            padding-left: 35px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            background-color: #fff;
+            padding: 12px 15px 12px 35px;
+            border-radius: 8px;
+            border-left: 4px solid #0dcaf0; /* خط ملون على اليسار */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .protocol-content b { display: block; color: #1e2a3a; font-weight: 700; font-size: 1rem; margin-bottom: 2px; }
+
+        /* علامة صح ✔️ بجانب كل تمرين */
+        .protocol-content li::before {
+            content: "\f00c"; /* رمز الصح من FontAwesome */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 12px;
+            top: 14px;
+            color: #198754;
+        }
+
+        /* اسم التمرين بالخط العريض */
+        .protocol-content b {
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1.05em;
+            display: block; /* يجعله في سطر منفصل */
+            margin-bottom: 4px;
+        }
+
+        /* الجرعة (Dosage) */
         .protocol-content i {
-            display: inline-block; font-style: normal; font-size: .8rem; font-weight: 600;
-            background: #eafaf1; color: #146c43; border: 1px solid #c5ecd6;
-            border-radius: 6px; padding: 2px 8px; margin-top: 6px;
+            display: block;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 6px;
+            font-style: normal;
+            background-color: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            width: fit-content;
+            border: 1px solid #e9ecef;
         }
-        .protocol-content h4 { font-size: 1.05rem; color: #0d6efd; font-weight: 700; margin: 14px 0 10px; }
 
-        .phase-accordion .accordion-item { border: 1px solid #e6ecf5; border-radius: 14px !important; overflow: hidden; margin-bottom: 10px; }
-        .phase-accordion .accordion-button { font-weight: 700; color: #1e3c72; background: #f5f9ff; }
-        .phase-accordion .accordion-button:not(.collapsed) { background: #e8f1ff; box-shadow: none; }
-
-        /* ---------- Notes ---------- */
-        .notes-content { white-space: pre-wrap; line-height: 1.8; }
-        .note-card { border-radius: 14px; padding: 16px 18px; border: 1px solid; margin-bottom: 12px; }
-        .note-card h6 { font-weight: 700; margin-bottom: 8px; }
-        .note-card p { margin: 0; white-space: pre-wrap; line-height: 1.7; font-size: .93rem; color: #2b3445; }
-        .note-blue  { background: #f0f6ff; border-color: #cfe0ff; } .note-blue h6  { color: #0b5ed7; }
-        .note-green { background: #effaf4; border-color: #c9ecd9; } .note-green h6 { color: #146c43; }
-        .note-red   { background: #fff3f3; border-color: #ffd0d0; } .note-red h6   { color: #b02a37; }
-
-        .print-title { display: none; }
+        /* تنسيق الملاحظات الطبية لكي تحترم الأسطر */
+        .notes-content {
+            white-space: pre-wrap; /* هذا السطر هو السر في ترتيب الملاحظات */
+            line-height: 1.8;
+        }
 
         footer {
-            margin-top: auto; background: white; padding: 20px; text-align: center;
-            color: #6c757d; border-top: 1px solid #eee;
+            margin-top: auto;
+            background: white;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #eee;
         }
     </style>
 
     <style>
-        /* ---------- Print ---------- */
-       
+        /* تنسيقات الطباعة */
+        @media print {
+            .no-print, .navbar, footer, .alert, .hero-section, form { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .container { margin-top: 0 !important; max-width: 100% !important; }
+            .protocol-content li { page-break-inside: avoid; border: 1px solid #eee; }
+            body::before {
+                content: "Physio Expert Pro - Clinical Protocol";
+                display: block;
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }
+        }
 
         {% if not (current_user.can_print or current_user.is_admin) %}
         @media print {
@@ -137,184 +165,8 @@
         }
         {% endif %}
     </style>
-
-    <style>
-      :root{--pe-ink:#172b4d;--pe-muted:#68778d;--pe-blue:#174a7e;--pe-teal:#159b9a;--pe-line:#e4eaf1;--pe-bg:#f4f7fa;--pe-radius:18px}
-      html{scroll-behavior:smooth} body{background:var(--pe-bg);color:var(--pe-ink);font-size:15px;line-height:1.8;text-align:right}
-      .navbar{border-bottom:1px solid var(--pe-line);box-shadow:0 3px 18px rgba(18,42,70,.045)!important}
-      .navbar-brand{color:var(--pe-blue)!important;font-weight:800!important;letter-spacing:-.3px}
-      .hero-section{background:radial-gradient(circle at 15% 15%,rgba(38,174,170,.22),transparent 32%),linear-gradient(125deg,#102f50 0%,#174a7e 62%,#176f7d 100%);padding:42px 20px 78px;border-radius:0 0 30px 30px;box-shadow:none;text-align:center}
-      .hero-section .display-5{font-size:clamp(1.8rem,4vw,2.55rem);letter-spacing:-.7px}
-      .hero-section .lead{font-size:1rem!important;color:#e4eef7;max-width:680px;margin-inline:auto}
-      .hero-section form{max-width:820px;margin:auto}
-      .hero-section .form-control{min-height:62px;padding-inline:26px 150px!important;border:1px solid rgba(255,255,255,.25)!important;box-shadow:0 12px 30px rgba(5,24,44,.2)!important;text-align:right}
-      .hero-section form button{left:8px!important;right:auto!important;min-width:122px;justify-content:center;background:#e5b85c;border-color:#e5b85c;color:#1b2b3d}
-      .container.pb-5{max-width:1180px!important;margin-top:-38px!important}
-      .result-header,.panel-card,.modality-card,.glance-card{border:1px solid var(--pe-line);border-radius:var(--pe-radius);box-shadow:0 5px 22px rgba(25,48,75,.045);background:#fff}
-      .result-header{padding:26px 28px;margin-bottom:18px!important}
-      .result-header h2{font-size:clamp(1.45rem,3vw,2rem);font-weight:800;line-height:1.45;color:var(--pe-ink)}
-      .status-pill{background:#edf7f7;color:#116c70;border-color:#cde8e6}
-      .glance-card{padding:17px;height:100%;gap:13px}
-      .glance-icon{width:46px;height:46px;border-radius:14px;background:#edf4fa!important;color:var(--pe-blue)!important}
-      .glance-label{font-size:.75rem;letter-spacing:0;color:#78869a;font-weight:700}
-      .glance-value{font-size:.95rem;line-height:1.6;color:#203750;overflow-wrap:anywhere}
-      .protocol-tabs{border-radius:16px;padding:7px;gap:6px;box-shadow:0 4px 16px rgba(25,48,75,.035);position:sticky;top:78px;z-index:5}
-      .protocol-tabs .nav-link{border-radius:11px;padding:10px 18px;color:#53647a;font-size:.9rem}
-      .protocol-tabs .nav-link.active{background:var(--pe-blue);box-shadow:0 4px 10px rgba(23,74,126,.16);color:white}
-      .tab-content{padding-top:8px}
-      .panel-card{padding:25px!important;margin-bottom:16px!important}
-      .panel-title{font-size:1.05rem;color:var(--pe-blue);font-weight:800;margin-bottom:12px!important}
-      .panel-card p{font-size:.97rem;line-height:2;color:#35465b}
-      .modality-card{padding:24px!important}
-      .modality-card.warn{background:#fffaf3;border-color:#f3dfc2}
-      .param-chip{border-radius:9px;padding:5px 11px;margin:0 0 7px 7px;background:#eef4fa;color:#214e78;border-color:#dce7f1;font-size:.84rem}
-      .param-chip.green{background:#edf8f4;color:#18765c;border-color:#d2ece1}
-      .protocol-content{font-size:.96rem;line-height:1.9;color:#35465b}
-      .protocol-content ul{padding:0;margin:0;display:grid;gap:10px}
-      .protocol-content li{border:1px solid #e7edf3;border-right:4px solid var(--pe-teal);border-left:1px solid #e7edf3;border-radius:13px;padding:15px 18px;margin:0;background:#fff;line-height:1.9}
-      .protocol-content b{font-size:1rem;color:#1d3552;margin-bottom:5px}
-      .protocol-content i{background:#edf8f4;color:#18765c;border-color:#d2ece1}
-      .protocol-content h4{color:var(--pe-blue);font-size:1.06rem;margin:20px 0 12px;font-weight:800}
-      .phase-accordion .accordion-item{border:1px solid var(--pe-line);border-radius:14px!important;margin-bottom:12px}
-      .phase-accordion .accordion-button{background:#f5f8fb;color:var(--pe-blue);font-weight:800;text-align:right}
-      .phase-accordion .accordion-button::after{margin-right:auto;margin-left:0}
-      .phase-accordion .accordion-body{padding:18px}
-      .note-card{border-radius:14px;padding:18px 20px;margin-bottom:14px}
-      .note-card p{line-height:2}
-      .print-hint{border-radius:12px;line-height:1.8}
-      .btn{font-weight:700}
-      footer{background:#fff;border-top:1px solid var(--pe-line);line-height:1.9}
-      .badge{font-weight:700;letter-spacing:0}
-      @media(max-width:767.98px){.hero-section{padding:32px 14px 66px;border-radius:0 0 22px 22px}.hero-section .form-control{min-height:58px;padding-inline:16px 112px!important;font-size:.88rem!important}.hero-section form button{min-width:94px;padding-inline:12px!important;font-size:.84rem}.container.pb-5{margin-top:-28px!important;padding-inline:12px}.result-header{padding:19px!important}.result-header .btn{width:100%;justify-content:center}.protocol-tabs{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:15px}.protocol-tabs .nav-link{width:100%;font-size:.83rem;padding:10px 7px}.panel-card{padding:18px!important}.glance-card{padding:12px;gap:9px}.glance-icon{width:39px;height:39px}.glance-value{font-size:.85rem}.navbar-nav{padding-top:12px;align-items:stretch!important}.navbar-nav .nav-item{width:100%;text-align:center}.navbar-nav .btn{width:100%}}
-      @media print{body{direction:rtl!important;text-align:right!important}.panel-card,.modality-card,.glance-card,.note-card{border:1px solid #d8dfe7!important;border-radius:8px!important}.protocol-content li{border-right:3px solid #555!important}}
-    </style>
-
-
-    <style id="physio-premium-refresh">
-      :root{
-        --pe-bg:#f5f5fb;--pe-surface:#ffffff;--pe-ink:#202338;--pe-muted:#777b91;
-        --pe-primary:#6258d9;--pe-primary-dark:#5147c7;--pe-primary-soft:#efedff;
-        --pe-teal:#259b83;--pe-line:#e8e8f1;--pe-warn:#d69b35;
-        --pe-shadow:0 8px 26px rgba(38,35,88,.055);--pe-radius:18px;
-      }
-      html{scroll-behavior:smooth}
-      body{background:var(--pe-bg)!important;color:var(--pe-ink)!important;font-family:'Cairo',sans-serif;line-height:1.8}
-      .navbar{background:rgba(255,255,255,.96)!important;border-bottom:1px solid var(--pe-line)!important;box-shadow:0 2px 14px rgba(40,38,80,.035)!important;padding-block:12px!important}
-      .navbar .container{max-width:1320px}
-      .navbar-brand{color:var(--pe-primary)!important;font-size:1.22rem!important;font-weight:800!important}
-      .navbar-brand i{color:var(--pe-primary)!important}
-      .navbar .btn-primary{background:var(--pe-primary)!important;border-color:var(--pe-primary)!important}
-      .navbar .btn-warning{background:var(--pe-primary-soft)!important;border-color:#dedbff!important;color:var(--pe-primary-dark)!important}
-      .hero-section{background:linear-gradient(110deg,#f0efff 0%,#f8f8fd 72%,#eef8f6 100%)!important;color:var(--pe-ink)!important;text-align:right!important;padding:34px 24px 62px!important;border-radius:0 0 26px 26px!important;box-shadow:none!important;border-bottom:1px solid #eeedf7}
-      .hero-section .container{max-width:1320px}
-      .hero-section .display-5{font-size:clamp(1.55rem,3vw,2.15rem)!important;color:#252640!important;font-weight:800!important;letter-spacing:-.5px}
-      .hero-section .lead{color:var(--pe-muted)!important;margin-inline:0!important;font-size:.98rem!important}
-      .hero-section form{max-width:760px!important;margin:0!important}
-      .hero-section .form-control{min-height:54px!important;background:#fff!important;border:1px solid #e4e2f3!important;border-radius:13px!important;box-shadow:0 5px 16px rgba(60,55,120,.06)!important;color:var(--pe-ink)!important;padding-inline:20px 128px!important}
-      .hero-section form button{background:var(--pe-primary)!important;border-color:var(--pe-primary)!important;color:#fff!important;border-radius:11px!important;min-width:106px!important;box-shadow:none!important}
-      .container.pb-5{max-width:1320px!important;margin-top:-28px!important}
-      .result-header,.panel-card,.modality-card,.glance-card{background:var(--pe-surface)!important;border:1px solid var(--pe-line)!important;border-radius:var(--pe-radius)!important;box-shadow:var(--pe-shadow)!important}
-      .result-header{padding:26px 30px!important;margin-bottom:20px!important}
-      .result-header h2{color:#24263c!important;font-size:clamp(1.4rem,2.5vw,1.9rem)!important;font-weight:800!important;line-height:1.5}
-      .result-header .badge{font-size:.76rem;padding:7px 12px!important;border-radius:8px!important}
-      .status-pill{background:#f1f0ff!important;border-color:#dedbff!important;color:var(--pe-primary-dark)!important}
-      .print-hint{background:#fbf8ef!important;border:1px solid #f0e5c9!important;color:#76613a!important}
-      .glance-card{padding:17px!important;gap:13px!important;min-height:92px}
-      .glance-icon{width:44px!important;height:44px!important;border-radius:13px!important;background:var(--pe-primary-soft)!important;color:var(--pe-primary)!important}
-      .glance-label{font-size:.72rem!important;color:#85879a!important;font-weight:700!important;letter-spacing:0!important}
-      .glance-value{font-size:.91rem!important;color:#292b42!important;font-weight:700!important;line-height:1.6}
-      .protocol-tabs{position:sticky;top:70px;z-index:5;background:#fff!important;border:1px solid var(--pe-line)!important;border-radius:15px!important;padding:7px!important;gap:5px!important;box-shadow:0 5px 18px rgba(38,35,88,.045)!important}
-      .protocol-tabs .nav-link{border-radius:10px!important;padding:10px 18px!important;color:#73758a!important;font-weight:700!important;font-size:.88rem!important;transition:background .2s,color .2s}
-      .protocol-tabs .nav-link.active{background:var(--pe-primary)!important;color:#fff!important;box-shadow:0 4px 11px rgba(98,88,217,.2)!important}
-      .tab-content{padding-top:9px}
-      .panel-card{padding:25px!important;margin-bottom:17px!important}
-      .panel-title{color:#343451!important;font-size:1.06rem!important;font-weight:800!important;margin-bottom:13px!important}
-      .panel-title i{color:var(--pe-primary)!important}
-      .panel-card p{color:#55596e!important;font-size:.96rem!important;line-height:2.05!important}
-      .modality-card{padding:23px!important}
-      .modality-card.warn{background:#fffbf3!important;border-color:#f1e5cd!important}
-      .param-chip{display:inline-flex;align-items:center;background:#f1f0ff!important;color:#5148b8!important;border:1px solid #e1defd!important;border-radius:8px!important;padding:5px 11px!important;margin:0 0 7px 6px!important;font-size:.82rem!important;font-weight:700!important}
-      .param-chip.green{background:#edf8f4!important;color:#247c68!important;border-color:#d8eee5!important}
-      .protocol-content{font-size:.96rem!important;color:#4b5065!important;line-height:1.95!important}
-      .protocol-content ul{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px!important;padding:0!important;margin:0!important}
-      .protocol-content li{background:#fff!important;border:1px solid #e9e9f1!important;border-right:4px solid var(--pe-primary)!important;border-radius:13px!important;padding:17px 18px!important;margin:0!important;line-height:1.9!important;box-shadow:0 3px 10px rgba(38,35,88,.025)}
-      .protocol-content b{color:#292b43!important;font-size:.98rem!important;font-weight:800!important;margin-bottom:5px!important}
-      .protocol-content i{background:#edf8f4!important;color:#247c68!important;border:1px solid #d8eee5!important;border-radius:7px!important;padding:3px 9px!important}
-      .protocol-content h4{color:#4f48b6!important;font-size:1.02rem!important;font-weight:800!important;margin:22px 0 13px!important;padding-bottom:9px;border-bottom:1px solid var(--pe-line)}
-      .phase-accordion .accordion-item{border:1px solid var(--pe-line)!important;border-radius:13px!important;overflow:hidden;margin-bottom:11px!important}
-      .phase-accordion .accordion-button{background:#f8f7ff!important;color:#343451!important;font-weight:800!important;padding:16px 19px!important}
-      .phase-accordion .accordion-button:not(.collapsed){background:#f0efff!important;color:var(--pe-primary-dark)!important;box-shadow:none!important}
-      .phase-accordion .accordion-button::after{margin-right:auto;margin-left:0}
-      .phase-accordion .accordion-body{padding:18px!important;background:#fff}
-      .note-card{border-radius:13px!important;padding:18px 20px!important;margin-bottom:13px!important}
-      .note-blue{background:#f4f3ff!important;border-color:#e1defd!important}.note-blue h6{color:#5148b8!important}
-      .note-green{background:#eff8f4!important;border-color:#d7eee4!important}.note-green h6{color:#247c68!important}
-      .note-red{background:#fff6f3!important;border-color:#f4dfd8!important}.note-red h6{color:#a65b48!important}
-      .notes-content{color:#55596e!important;line-height:2!important}
-      .btn-primary{background:var(--pe-primary)!important;border-color:var(--pe-primary)!important}
-      .btn-outline-primary{color:var(--pe-primary)!important;border-color:#cbc7fa!important}
-      .btn-outline-primary:hover{background:var(--pe-primary)!important;color:#fff!important}
-      footer{background:#fff!important;border-top:1px solid var(--pe-line)!important;color:#85879a!important;margin-top:30px!important}
-      @media(max-width:767.98px){
-        .hero-section{padding:27px 16px 50px!important;text-align:right!important}
-        .hero-section .form-control{min-height:52px!important;padding-inline:14px 105px!important;font-size:.85rem!important}
-        .hero-section form button{min-width:88px!important;font-size:.82rem!important;padding-inline:10px!important}
-        .container.pb-5{padding-inline:12px!important;margin-top:-22px!important}
-        .result-header{padding:19px!important}
-        .result-header .btn{width:100%;justify-content:center}
-        .protocol-tabs{position:static!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;border-radius:13px!important}
-        .protocol-tabs .nav-link{width:100%;padding:10px 6px!important;font-size:.81rem!important}
-        .panel-card{padding:18px!important}
-        .glance-card{padding:12px!important;min-height:78px}
-        .glance-icon{width:38px!important;height:38px!important}
-        .glance-value{font-size:.82rem!important}
-        .protocol-content ul{grid-template-columns:1fr!important}
-        .modality-card{padding:18px!important}
-      }
-      @media print{
-        body{background:#fff!important;color:#222!important}
-        .result-header,.panel-card,.modality-card,.glance-card,.note-card{box-shadow:none!important;border:1px solid #ddd!important}
-        .protocol-content ul{grid-template-columns:1fr 1fr!important}
-      }
-    </style>
-
-    <style id="physio-exercise-cards-v3">
-      /* Exercise library cards: clean clinical layout, image-ready without inventing assets */
-      #exerciseBox .phase-accordion .accordion-body{padding:20px!important}
-      #exerciseBox ul{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;list-style:none!important;padding:0!important;margin:0!important}
-      #exerciseBox li.pe-exercise-card{display:flex!important;flex-direction:column!important;gap:0!important;overflow:hidden!important;padding:0!important;margin:0!important;min-width:0;background:#fff!important;border:1px solid #e7e7f0!important;border-right:3px solid #6258d9!important;border-radius:16px!important;box-shadow:0 4px 14px rgba(40,38,85,.045)!important;line-height:1.8!important}
-      #exerciseBox .pe-exercise-media{height:190px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#f2f1ff,#f8f8fc 65%,#edf7f4);border-bottom:1px solid #ededf4}
-      #exerciseBox .pe-exercise-media img{width:100%;height:100%;object-fit:cover;display:block}
-      #exerciseBox .pe-image-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#7773b9;text-align:center;padding:18px}
-      #exerciseBox .pe-image-placeholder i{font-size:2.25rem;color:#817be0}
-      #exerciseBox .pe-image-placeholder span{font-size:.8rem;font-weight:700;color:#777b91}
-      #exerciseBox .pe-exercise-body{padding:17px 18px 18px;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
-      #exerciseBox li.pe-exercise-card b{font-size:1.02rem!important;line-height:1.55!important;color:#292b43!important;margin:0 0 2px!important;font-weight:800!important}
-      #exerciseBox li.pe-exercise-card .pe-exercise-description{font-size:.91rem;color:#5d6175;line-height:1.9}
-      #exerciseBox li.pe-exercise-card i{display:inline-flex!important;align-items:center;background:#edf8f4!important;color:#247c68!important;border:1px solid #d8eee5!important;border-radius:8px!important;padding:5px 10px!important;font-size:.8rem!important;font-weight:800!important;margin-top:4px!important}
-      #exerciseBox li.pe-exercise-card .pe-exercise-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
-      #exerciseBox li.pe-exercise-card .pe-exercise-meta span{display:inline-flex;align-items:center;gap:6px;background:#f4f3ff;color:#5148b8;border:1px solid #e6e3ff;border-radius:8px;padding:4px 9px;font-size:.75rem;font-weight:700}
-      #exerciseBox .phase-accordion .accordion-button{font-size:.96rem}
-      @media(max-width:767.98px){#exerciseBox ul{grid-template-columns:1fr!important;gap:13px!important}#exerciseBox .pe-exercise-media{height:205px}#exerciseBox .phase-accordion .accordion-body{padding:13px!important}}
-      @media print{#exerciseBox ul{grid-template-columns:1fr 1fr!important}#exerciseBox .pe-exercise-media{height:130px}#exerciseBox li.pe-exercise-card{break-inside:avoid;box-shadow:none!important}}
-
-      #exerciseBox .pe-exercise-gallery{position:relative;width:100%;height:100%}
-      #exerciseBox .pe-exercise-gallery img{width:100%;height:100%;object-fit:contain;background:#f7f7fb}
-      #exerciseBox .pe-gallery-nav{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;background:rgba(35,34,64,.78);color:#fff;font-size:25px;line-height:1;display:grid;place-items:center}
-      #exerciseBox .pe-gallery-prev{right:10px} #exerciseBox .pe-gallery-next{left:10px}
-      #exerciseBox .pe-gallery-counter{position:absolute;bottom:9px;left:10px;background:rgba(35,34,64,.78);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
-    </style>
-
 </head>
-<body class="d-flex flex-column min-vh-100">
-
-{# ---------- helper: split "a | b | c" (or "a, b, c") into chips ---------- #}
-{% macro chips(s, cls='') %}
-    {% if s %}
-        {% set parts = s.split('|') if '|' in s else s.split(',') %}
-        {% for part in parts if part.strip() %}<span class="param-chip {{ cls }}">{{ part.strip() }}</span>{% endfor %}
-    {% endif %}
-{% endmacro %}
+<body class="bg-light d-flex flex-column min-vh-100">
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3">
   <div class="container">
@@ -329,19 +181,19 @@
         {% if current_user.is_authenticated %}
             {% if current_user.is_admin %}
                 <li class="nav-item">
-                    <a href="/admin" class="btn btn-warning btn-sm fw-bold text-dark px-3 rounded-pill"><i class="fas fa-cog"></i> لوحة الإدارة</a>
+                    <a href="/admin" class="btn btn-warning btn-sm fw-bold text-dark px-3 rounded-pill"><i class="fas fa-cog"></i> Admin</a>
                 </li>
             {% endif %}
             <li class="nav-item text-secondary">
-                <small class="text-muted d-block lh-1" style="font-size: 0.75rem;">مسجل الدخول باسم</small>
+                <small class="text-muted d-block lh-1" style="font-size: 0.75rem;">Logged in as</small>
                 <span class="fw-bold text-dark">{{ user.email.split('@')[0] }}</span>
             </li>
             <li class="nav-item">
-                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">تسجيل الخروج</a>
+                <form action="{{ url_for('logout') }}" method="POST" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">Logout</button></form>
             </li>
         {% else %}
-            <li class="nav-item"><a href="/login" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">تسجيل الدخول</a></li>
-            <li class="nav-item"><a href="/register" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">إنشاء حساب</a></li>
+            <li class="nav-item"><a href="/login" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Login</a></li>
+            <li class="nav-item"><a href="/register" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">Register</a></li>
         {% endif %}
       </ul>
     </div>
@@ -350,14 +202,15 @@
 
 <div class="hero-section text-center">
     <div class="container">
-        <h1 class="display-5 fw-bold mb-2">Physio Expert Pro</h1>
-        <p class="lead mb-4 opacity-75 fw-light" style="font-size: 1.15rem;">ابحث عن الحالة المرضية واحصل على بروتوكول علاجي منظم.</p>
+        <h1 class="display-4 fw-bold mb-3">Physio Expert Pro</h1>
+        <p class="lead mb-4 opacity-75 fw-light" style="font-size: 1.25rem;">Advanced Physiotherapy Protocols</p>
         <div class="row justify-content-center">
-            <div class="col-lg-8">
+            <div class="col-md-15 col-lg-8">
                 <form action="/" method="POST" class="position-relative">
-                    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="مثال: خشونة الركبة، إصابة الرباط الصليبي، السكتة الدماغية..." required style="font-size: 1rem; padding-right: 130px !important;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="e.g. ACL, Stroke..." required style="font-size: 1rem; padding-right: 120px !important;">
                     <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
-                        <i class="fas fa-search me-2"></i> ابحث
+                        <i class="fas fa-search me-2"></i> Search
                     </button>
                 </form>
             </div>
@@ -365,444 +218,166 @@
     </div>
 </div>
 
-<div class="container pb-5" style="margin-top: -30px; position: relative; z-index: 2;">
-
+<div class="container" style="margin-top: -30px; position: relative; z-index: 2;">
     {% if result %}
-    {# ----- variables used below ----- #}
-    {% set et = (result.estim_type or '')|trim|lower %}
-    {% set ut = (result.us_type or '')|trim|lower %}
-    {% set show_estim = et not in ['', 'none'] %}
-    {% set show_us = ut not in ['', 'none'] %}
-    {% set us_warn = ut.startswith('not') or ut.startswith('contra') or ut.startswith('avoid') %}
-    {% set ex = result.exercises_list or '' %}
-    {% set can_print_now = current_user.is_authenticated and (current_user.is_admin or current_user.can_print) %}
-
+    
     <div class="mb-5">
-
-        {# ---------- Header ---------- #}
-        <div class="result-header mb-3">
-            <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-3">
-                <div style="flex: 1; min-width: 220px;">
-                    <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
-                            {{ result.category or (result.keywords or 'General').split(',')[0] }}
-                        </span>
-                        {% if result.evidence_level %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
-                            <i class="fas fa-award me-1"></i> {{ result.evidence_level }}
-                        </span>
-                        {% endif %}
-                        {% if current_user.is_authenticated and not current_user.is_admin and days_left is number %}
-                        <span class="status-pill no-print">
-                            <i class="fas fa-clock"></i>
-                            {{ 'اشتراك' if current_user.is_paid else 'فترة تجريبية' }} &middot; {{ days_left }} يوم متبقٍ
-                        </span>
-                        {% endif %}
-                    </div>
-                    <h2 class="fw-bold text-dark mb-0">{{ result.disease_name }}</h2>
-                </div>
-
-                <div class="no-print">
-                    {% if can_print_now %}
-                        <button onclick="window.print()" class="btn btn-danger rounded-pill px-4 py-2 shadow-sm d-flex align-items-center">
-                            <i class="fas fa-print me-2"></i> طباعة البروتوكول
-                        </button>
-                    {% else %}
-                        <button class="btn btn-outline-secondary rounded-pill px-4 py-2 d-flex align-items-center" disabled>
-                            <i class="fas fa-lock me-2"></i> الطباعة للمشتركين
-                        </button>
-                    {% endif %}
-                </div>
+        
+        <div class="card-custom p-4 mb-4 d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 position-relative bg-white rounded shadow-sm border">
+            <div style="flex: 1;">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill mb-2">Protocol Result</span>
+                <h2 class="fw-bold text-dark mb-0 display-6">{{ result.disease_name }}</h2>
             </div>
-
-            {% if result.clinical_warning %}
-            <div class="alert alert-warning mt-3 mb-0" role="alert">
-                <i class="fas fa-triangle-exclamation me-2"></i>
-                <strong>تنبيه المراجعة السريرية:</strong> {{ result.clinical_warning }}
-            </div>
-            {% endif %}
-
-            {% if not can_print_now and current_user.is_authenticated %}
-            <div class="print-hint no-print">
-                <i class="fas fa-lock me-1"></i>
-                {% if current_user.is_paid %}
-                    تتاح الطباعة بعد مرور 24 ساعة من تفعيل الاشتراك.
-                {% else %}
-                    الطباعة متاحة ضمن الاشتراك الشهري.
-                    <a href="mailto:{{ support_email }}?subject=اشتراك%20Request" class="fw-bold text-decoration-none">اشترك الآن &middot; 150 جنيه / شهر</a>
+            
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fs-6">
+                    {{ (result.keywords or 'General').split(',')[0] }}
+                </span>                
+                {% if current_user.is_admin or current_user.can_print %}
+                    <button onclick="window.print()" class="btn btn-danger rounded-pill px-3 py-2 shadow-sm no-print-btn d-flex align-items-center">
+                        <i class="fas fa-file-pdf me-2"></i> Print
+                    </button>
                 {% endif %}
             </div>
-            {% endif %}
+        </div>
+        
+        <div class="mint-table-container shadow-sm mb-5 bg-white rounded overflow-hidden border">
+            <div class="text-white p-3 ps-4 fw-bold d-flex align-items-center" style="background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
+                <i class="fas fa-notes-medical me-2 fs-5"></i> Clinical Presentation & Definition
+            </div>
+            <div class="p-4 text-dark" style="font-size: 1.1rem; line-height: 1.7; color: #052c65;">
+                {{ result.description }}
+            </div>
         </div>
 
-        {# ---------- At a glance ---------- #}
-        <div class="row g-3 mb-4">
-            {% if show_estim %}
-            <div class="col-6 col-lg-3">
-                <div class="glance-card">
-                    <div class="glance-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-bolt"></i></div>
-                    <div><div class="glance-label">العلاج الكهربائي</div><div class="glance-value">{{ result.estim_type }}</div></div>
-                </div>
-            </div>
-            {% endif %}
-            {% if show_us %}
-            <div class="col-6 col-lg-3">
-                <div class="glance-card">
-                    <div class="glance-icon {{ 'bg-warning bg-opacity-25 text-warning' if us_warn else 'bg-success bg-opacity-10 text-success' }}"><i class="fas fa-wave-square"></i></div>
-                    <div><div class="glance-label">الموجات فوق الصوتية</div><div class="glance-value">{{ result.us_type }}</div></div>
-                </div>
-            </div>
-            {% endif %}
-            {% if result.ex_frequency %}
-            <div class="col-6 col-lg-3">
-                <div class="glance-card">
-                    <div class="glance-icon bg-info bg-opacity-10 text-info"><i class="fas fa-calendar-check"></i></div>
-                    <div><div class="glance-label">تكرار التمارين</div><div class="glance-value">{{ result.ex_frequency }}</div></div>
-                </div>
-            </div>
-            {% endif %}
-            {% if result.ex_intensity %}
-            <div class="col-6 col-lg-3">
-                <div class="glance-card">
-                    <div class="glance-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-gauge-high"></i></div>
-                    <div><div class="glance-label">الشدة</div><div class="glance-value">{{ result.ex_intensity }}</div></div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        {# ---------- Tabs ---------- #}
-        <ul class="nav nav-pills protocol-tabs mb-3 no-print" id="protocolTabs" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button"><i class="fas fa-notes-medical me-1"></i> نظرة عامة</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-modalities" type="button"><i class="fas fa-bolt me-1"></i> الوسائل العلاجية</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-exercises" type="button"><i class="fas fa-running me-1"></i> التمارين العلاجية</button></li>
-            {% if result.notes %}
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-notes" type="button"><i class="fas fa-shield-halved me-1"></i> الاحتياطات والملاحظات</button></li>
-            {% endif %}
-        </ul>
-
-        <div class="tab-content">
-
-            {# ===== نظرة عامة ===== #}
-            <div class="tab-pane fade show active" id="tab-overview">
-                <h5 class="print-title">نظرة عامة</h5>
-                <div class="panel-card p-4 mb-3">
-                    <div class="panel-title mb-2"><i class="fas fa-notes-medical me-2 text-primary"></i>التعريف والصورة الإكلينيكية</div>
-                    <p class="mb-0" style="line-height: 1.8; color: #2b3445;">{{ result.description }}</p>
-                </div>
-
-                {% if result.ex_progression %}
-                <div class="panel-card p-4 mb-3">
-                    <div class="panel-title mb-2"><i class="fas fa-stairs me-2 text-primary"></i>التدرج العلاجي</div>
-                    <p class="mb-0" style="line-height: 1.7;">{{ result.ex_progression }}</p>
-                </div>
-                {% endif %}
-
-                {% if result.source_ref %}
-                <div class="panel-card px-4 py-3 d-flex flex-wrap align-items-center gap-2">
-                    <small class="text-muted fw-bold text-uppercase" style="letter-spacing:.5px;"><i class="fas fa-book-medical me-1"></i> المراجع العلمية</small>
-                    <small class="text-dark fst-italic">{{ result.source_ref }}</small>
-                </div>
-                {% endif %}
-            </div>
-
-            {# ===== الوسائل العلاجية ===== #}
-            <div class="tab-pane fade" id="tab-modalities">
-                <h5 class="print-title">الوسائل العلاجية</h5>
-                <div class="row g-3 align-items-stretch">
-                    {% if show_estim %}
-                    <div class="col-lg-6">
-                        <div class="modality-card p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="glance-icon bg-primary bg-opacity-10 text-primary me-3"><i class="fas fa-bolt"></i></div>
-                                <div>
-                                    <div class="glance-label">العلاج الكهربائي</div>
-                                    <div class="fw-bold text-primary">{{ result.estim_type }}</div>
-                                </div>
-                            </div>
-                            <div class="glance-label mb-2">الإعدادات</div>
-                            <div class="mb-3">{{ chips(result.estim_params) }}</div>
-
-                            {% if result.electrode_image %}
-                            <div class="text-center my-3 p-2 border rounded bg-white">
-                                <div class="glance-label mb-2">Placement Guide</div>
-                                {% if 'data:image' in result.electrode_image %}
-                                    <img src="{{ result.electrode_image }}" class="img-fluid rounded border" style="max-height: 150px;" alt="Electrode placement">
-                                {% else %}
-                                    <img src="{{ url_for('static', filename=result.electrode_image) }}" class="img-fluid rounded border" style="max-height: 150px;" alt="Electrode placement"
-                                         onerror="this.closest('.text-center').style.display='none';">
-                                {% endif %}
-                            </div>
-                            {% endif %}
-
-                            {% if result.estim_role %}
-                            <div class="small text-muted border-top pt-2"><strong class="text-dark">الهدف العلاجي:</strong> {{ result.estim_role }}</div>
-                            {% endif %}
+        <div class="row g-4 mb-5 align-items-stretch">
+            
+            <div class="col-md-6">
+                <div class="card-custom h-100 p-4 border-start border-5 border-primary bg-white rounded shadow-sm">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3 text-primary d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-bolt fa-lg"></i>
                         </div>
+                        <h5 class="fw-bold text-primary mb-0">Electrotherapy</h5>
                     </div>
-                    {% endif %}
-
-                    {% if show_us %}
-                    <div class="col-lg-6">
-                        <div class="modality-card p-4 {{ 'warn' if us_warn else '' }}">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="glance-icon {{ 'bg-warning bg-opacity-25 text-warning' if us_warn else 'bg-success bg-opacity-10 text-success' }} me-3"><i class="fas fa-wave-square"></i></div>
-                                <div>
-                                    <div class="glance-label">الموجات فوق الصوتية</div>
-                                    <div class="fw-bold {{ 'text-warning-emphasis' if us_warn else 'text-success' }}">{{ result.us_type }}</div>
-                                </div>
-                            </div>
-                            <div class="glance-label mb-2">{{ 'تنبيه واحتياطات' if us_warn else 'الإعدادات' }}</div>
-                            <div class="mb-3">{{ chips(result.us_params, '' if us_warn else 'green') }}</div>
-                            {% if result.us_role %}
-                            <div class="small text-muted border-top pt-2"><strong class="text-dark">الهدف العلاجي:</strong> {{ result.us_role }}</div>
+                    <hr class="text-muted opacity-25">
+                    <div class="mb-2">
+                         <p class="mb-1"><strong>Type:</strong> <span class="badge bg-primary-subtle text-primary border border-primary">{{ result.estim_type }}</span></p>
+                    </div>
+                    <div class="p-2 bg-light rounded mb-3">
+                        <small class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">Parameters</small>
+                        <p class="mb-0 text-dark small">{{ result.estim_params }}</p>
+                    </div>
+                    <div class="text-center my-3 p-2 border rounded bg-white">
+                         <h6 class="text-primary fw-bold mb-2" style="font-size: 0.8rem;">Placement Guide</h6>
+                         {% if result.electrode_image %}
+                            {% if 'data:image' in result.electrode_image %}
+                                <img src="{{ result.electrode_image }}" class="img-fluid rounded border shadow-sm" style="max-height: 150px;">
+                            {% else %}
+                                <img src="{{ url_for('static', filename=result.electrode_image) }}" 
+                                     class="img-fluid rounded border shadow-sm" style="max-height: 150px;" 
+                                     onerror="this.parentElement.innerHTML='<span class=\'text-muted small\'>Image Not Found</span>';">
                             {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if not show_estim and not show_us %}
-                    <div class="col-12"><div class="panel-card p-4 text-muted">لا توجد توصية مسجلة بالعلاج الكهربائي أو الموجات فوق الصوتية لهذه الحالة. يُرجى مراجعة برنامج التمارين.</div></div>
-                    {% endif %}
-                </div>
-            </div>
-
-            {# ===== التمارين العلاجية ===== #}
-            <div class="tab-pane fade" id="tab-exercises">
-                <h5 class="print-title">Therapeutic التمارين العلاجية</h5>
-                <div class="panel-card p-4">
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        {% if result.ex_frequency %}<span class="param-chip"><i class="fas fa-calendar-check me-1"></i>{{ result.ex_frequency }}</span>{% endif %}
-                        {% if result.ex_intensity %}<span class="param-chip"><i class="fas fa-gauge-high me-1"></i>{{ result.ex_intensity }}</span>{% endif %}
-                    </div>
-
-                    <div class="protocol-content" id="exerciseBox">
-                        {% if '<' in ex %}
-                            {{ ex | safe }}
                         {% else %}
-                            <ul>
-                            {% for item in ex.split(',') if item.strip() %}
-                                <li><b>{{ item.strip() }}</b></li>
-                            {% endfor %}
-                            </ul>
+                             <span class="text-muted small">No Image Available</span>
                         {% endif %}
                     </div>
-
-                    {% if result.exercises_role %}
-                    <div class="mt-3 p-3 rounded border-start border-primary border-4" style="background:#f5f9ff;">
-                        <div class="fw-bold text-primary small mb-1"><i class="fas fa-bullseye me-2"></i>هدف التمارين</div>
-                        <div class="small">{{ result.exercises_role }}</div>
-                    </div>
-                    {% endif %}
+                    <p class="small text-muted mt-auto fst-italic border-top pt-2"><strong>Goal:</strong> {{ result.estim_role }}</p>
                 </div>
             </div>
 
-            {# ===== تنبيه واحتياطاتs & Notes ===== #}
-            {% if result.notes %}
-            <div class="tab-pane fade" id="tab-notes">
-                <h5 class="print-title">الاحتياطات والملاحظات</h5>
-                <div id="notesRaw" class="panel-card p-4 notes-content">{{ result.notes }}</div>
-                <div id="notesStructured"></div>
+            <div class="col-md-6">
+                <div class="card-custom h-100 p-4 border-start border-5 border-success bg-white rounded shadow-sm">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3 text-success d-flex justify-content-center align-items-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-wave-square fa-lg"></i>
+                        </div>
+                        <h5 class="fw-bold text-success mb-0">Ultrasound</h5>
+                    </div>
+                    <hr class="text-muted opacity-25">
+                     <div class="mb-2">
+                        <p class="mb-1"><strong>Type:</strong> <span class="badge bg-success-subtle text-success border border-success">{{ result.us_type }}</span></p>
+                    </div>
+                    <div class="p-2 bg-light rounded mb-3">
+                        <small class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">Parameters</small>
+                        <p class="mb-0 text-dark small">{{ result.us_params }}</p>
+                    </div>
+                    <p class="small text-muted mt-auto fst-italic border-top pt-2"><strong>Goal:</strong> {{ result.us_role }}</p>
+                </div>
             </div>
-            {% endif %}
         </div>
 
-    </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card h-100 border-0 shadow-sm" style="background-color: #f0f8ff; border-radius: 15px;">
+                    <div class="card-header text-white fw-bold py-3" style="border-radius: 15px 15px 0 0; background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
+                        <i class="fas fa-running me-2"></i> Therapeutic Exercises 
+                    </div>
+                    
+                    <div class="card-body p-4">
+                        <div class="protocol-content">
+                             {{ result.exercises_list | safe }}
+                        </div>
+                        <div class="mt-4 p-3 bg-white border-start border-primary border-4 rounded shadow-sm">
+                            <h6 class="fw-bold text-primary"><i class="fas fa-bullseye me-2"></i> Exercise Goal:</h6>
+                            <p class="mb-0">{{ result.exercises_role }}</p>
+                        </div>
+                    </div> 
+                </div> 
+            </div> 
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                 {% if result.notes %}
+                <div class="alert alert-warning shadow-sm border-start border-warning border-5" role="alert">
+                    <h5 class="alert-heading fw-bold"><i class="fas fa-sticky-note me-2"></i> Specialist Notes:</h5>
+                    <p class="mb-0 notes-content">{{ result.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
+        <div class="d-flex justify-content-center mt-2">
+            <div class="bg-white px-4 py-2 rounded-pill border shadow-sm text-center">
+                 <small class="text-muted fw-bold me-2">SCIENTIFIC REFERENCE:</small>
+                 <small class="text-dark fst-italic">{{ result.source_ref }}</small>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 no-print">
+            {% if current_user.is_authenticated and (current_user.can_print or current_user.is_admin) %}
+                <button onclick="window.print()" class="btn btn-primary btn-lg shadow rounded-pill px-4">
+                    <i class="fas fa-print me-2"></i> Print Protocol
+                </button>
+            {% else %}
+                <button class="btn btn-secondary rounded-pill px-4" disabled title="Printing is disabled for your account">
+                    <i class="fas fa-lock me-2"></i> Print Locked
+                </button>
+                {% if not current_user.is_authenticated %}
+                    <p class="small text-muted mt-2">Please <a href="/login">login</a> to print.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        
+    </div>
     {% elif request.method == 'POST' %}
         <div class="text-center py-5">
             <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
                 <i class="fas fa-search fa-3x text-primary opacity-50"></i>
             </div>
-            <h3 class="fw-bold">لم يتم العثور على نتائج.</h3>
-            <p class="text-muted">جرّب البحث بكلمات مثل: الركبة، الكتف، أو السكتة الدماغية.</p>
+            <h3 class="fw-bold">No results found.</h3>
+            <p class="text-muted">Try searching for keywords like "Knee", "Shoulder", or "Stroke".</p>
         </div>
-    {% else %}
-        <section class="panel-card p-4 p-md-5 text-center my-4" aria-label="إرشادات البحث">
-            <div class="glance-icon mx-auto mb-3" style="width:64px;height:64px;background:#efedff;color:#6258d9;font-size:1.5rem;">
-                <i class="fas fa-stethoscope" aria-hidden="true"></i>
-            </div>
-            <h2 class="h4 fw-bold mb-2">مرحبًا بك في Physio Expert Pro</h2>
-            <p class="text-muted mb-3">اكتب اسم الحالة المرضية في مربع البحث بالأعلى لعرض البروتوكول المتاح.</p>
-            <div class="d-flex flex-wrap justify-content-center gap-2">
-                <span class="param-chip">خشونة الركبة</span>
-                <span class="param-chip">إصابة الرباط الصليبي</span>
-                <span class="param-chip">السكتة الدماغية</span>
-            </div>
-        </section>
     {% endif %}
 </div>
 
-<footer class="text-center text-muted mt-auto mb-0 pt-4 pb-4 border-top">
-    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> {{ disclaimer }}</p>
-    <p class="small">الدعم الفني: <a href="mailto:{{ support_email }}" class="text-decoration-none fw-bold">{{ support_email }}</a></p>
-    <p class="mb-1 fw-bold">&copy; 2026 Physio Expert Pro</p>
+<footer class="text-center text-muted mt-auto mb-0 pt-5 pb-4 border-top">
+    <p class="small text-danger fw-bold"><i class="fas fa-shield-alt me-1"></i> Disclaimer: For educational purposes only.</p>
+    <p class="small">Support: <a href="mailto:support@physioexpert.pro" class="text-decoration-none fw-bold text-cyan-theme">support@physioexpert.pro</a></p>
+    <p class="mb-1 fw-bold text-cyan-theme">© 2026 Physio Expert Pro</p>
 </footer>
 
-<script>window.PE_EXERCISE_IMAGES = {{ exercise_images|default({})|tojson }};</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-(function () {
-    /* ---------- 1) التمارين العلاجية: clean text + group into collapsible phases ---------- */
-    var box = document.getElementById('exerciseBox');
-    if (box) {
-        box.querySelectorAll('li').forEach(function (li) {
-            var b = li.querySelector('b');
-            if (b && b.nextSibling && b.nextSibling.nodeType === 3) {
-                b.nextSibling.textContent = b.nextSibling.textContent.replace(/^\s*:\s*/, '');
-            }
-            var d = li.querySelector('i');
-            if (d) d.textContent = d.textContent.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '');
-        });
-
-        var heads = Array.prototype.slice.call(box.querySelectorAll('h4'));
-        if (heads.length) {
-            var acc = document.createElement('div');
-            acc.className = 'accordion phase-accordion';
-            acc.id = 'phaseAcc';
-
-            heads.forEach(function (h, idx) {
-                var nodes = [];
-                var n = h.nextSibling;
-                while (n && !(n.nodeType === 1 && n.tagName === 'H4')) {
-                    var skip = (n.nodeType === 1 && n.tagName === 'HR') ||
-                               (n.nodeType === 3 && !n.textContent.trim());
-                    if (!skip) nodes.push(n);
-                    n = n.nextSibling;
-                }
-
-                var item = document.createElement('div');
-                item.className = 'accordion-item';
-
-                var hh = document.createElement('h2');
-                hh.className = 'accordion-header';
-                var btn = document.createElement('button');
-                btn.className = 'accordion-button' + (idx === 0 ? '' : ' collapsed');
-                btn.type = 'button';
-                btn.setAttribute('data-bs-toggle', 'collapse');
-                btn.setAttribute('data-bs-target', '#ph' + idx);
-                btn.textContent = h.textContent;
-                hh.appendChild(btn);
-
-                var col = document.createElement('div');
-                col.id = 'ph' + idx;
-                col.className = 'accordion-collapse collapse' + (idx === 0 ? ' show' : '');
-                var body = document.createElement('div');
-                body.className = 'accordion-body';
-                nodes.forEach(function (x) { body.appendChild(x); });
-                col.appendChild(body);
-
-                item.appendChild(hh);
-                item.appendChild(col);
-                acc.appendChild(item);
-            });
-
-            heads.forEach(function (h) { h.remove(); });
-            box.querySelectorAll(':scope > hr').forEach(function (hr) { hr.remove(); });
-            box.appendChild(acc);
-        }
-    }
-
-    /* ---------- 1b) Render each legacy exercise as a premium, image-ready card ---------- */
-    if (box) {
-        box.querySelectorAll('li').forEach(function (li) {
-            if (li.classList.contains('pe-exercise-card')) return;
-            li.classList.add('pe-exercise-card');
-
-            var existingImage = li.querySelector('img');
-            var titleNode = li.querySelector('b');
-            var exerciseTitle = titleNode ? titleNode.textContent.trim() : 'صورة التمرين';
-            var normalizeKey = function (value) {
-                return (value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
-            };
-            var imageMap = window.PE_EXERCISE_IMAGES || {};
-            var imageList = imageMap[normalizeKey(exerciseTitle)] || [];
-            var legacyUrl = li.getAttribute('data-exercise-image') || (existingImage ? existingImage.getAttribute('src') : '');
-            if (!imageList.length && legacyUrl) imageList = [{url: legacyUrl, alt: exerciseTitle}];
-            var media = document.createElement('div');
-            media.className = 'pe-exercise-media';
-            if (imageList.length) {
-                var gallery = document.createElement('div');
-                gallery.className = 'pe-exercise-gallery';
-                var img = document.createElement('img');
-                img.src = imageList[0].url;
-                img.alt = imageList[0].alt || exerciseTitle;
-                img.loading = 'lazy';
-                gallery.appendChild(img);
-                if (imageList.length > 1) {
-                    var counter = document.createElement('span');
-                    counter.className = 'pe-gallery-counter';
-                    counter.textContent = '1 / ' + imageList.length;
-                    var previous = document.createElement('button');
-                    previous.type = 'button'; previous.className = 'pe-gallery-nav pe-gallery-prev'; previous.setAttribute('aria-label','الصورة السابقة'); previous.textContent = '‹';
-                    var next = document.createElement('button');
-                    next.type = 'button'; next.className = 'pe-gallery-nav pe-gallery-next'; next.setAttribute('aria-label','الصورة التالية'); next.textContent = '›';
-                    var current = 0;
-                    var showImage = function (index) { current = (index + imageList.length) % imageList.length; img.src = imageList[current].url; img.alt = imageList[current].alt || exerciseTitle; counter.textContent = (current + 1) + ' / ' + imageList.length; };
-                    previous.addEventListener('click', function(){showImage(current - 1);});
-                    next.addEventListener('click', function(){showImage(current + 1);});
-                    gallery.appendChild(previous); gallery.appendChild(next); gallery.appendChild(counter);
-                }
-                media.appendChild(gallery);
-                if (existingImage) existingImage.remove();
-            } else {
-                var placeholder = document.createElement('div');
-                placeholder.className = 'pe-image-placeholder';
-                placeholder.innerHTML = '<i class="fas fa-person-walking" aria-hidden="true"></i><span>لا توجد صورة معتمدة لهذا التمرين بعد</span>';
-                media.appendChild(placeholder);
-            }
-
-            var body = document.createElement('div');
-            body.className = 'pe-exercise-body';
-            var title = li.querySelector('b');
-            if (title) body.appendChild(title);
-
-            // Move remaining content into the body while preserving its original text and dosage markup.
-            Array.from(li.childNodes).forEach(function (node) {
-                if (node === media || node === body) return;
-                body.appendChild(node);
-            });
-            li.appendChild(media);
-            li.appendChild(body);
-        });
-    }
-
-    /* ---------- 2) Notes: split into Diagnosis / العلاج اليدوي / تنبيه واحتياطاتs cards ---------- */
-    var raw = document.getElementById('notesRaw');
-    var out = document.getElementById('notesStructured');
-    if (raw && out) {
-        var t = raw.textContent;
-        var defs = [
-            { key: 'Diagnosis',      icon: 'fa-stethoscope',     cls: 'note-blue',  title: 'التقييم والتشخيص' },
-            { key: 'العلاج اليدوي', icon: 'fa-hands',           cls: 'note-green', title: 'العلاج اليدوي' },
-            { key: 'تنبيه واحتياطاتs',    icon: 'fa-triangle-exclamation', cls: 'note-red', title: 'تنبيه واحتياطاتs' }
-        ];
-        var found = [];
-        defs.forEach(function (d) {
-            var m = new RegExp('(^|\\n)\\s*' + d.key + '\\s*:', 'i').exec(t);
-            if (m) found.push({ def: d, i: m.index, len: m[0].length });
-        });
-        if (found.length) {
-            found.sort(function (a, b) { return a.i - b.i; });
-            found.forEach(function (f, k) {
-                var end = (k + 1 < found.length) ? found[k + 1].i : t.length;
-                var content = t.slice(f.i + f.len, end).trim();
-                if (!content) return;
-                var card = document.createElement('div');
-                card.className = 'note-card ' + f.def.cls;
-                var h6 = document.createElement('h6');
-                h6.innerHTML = '<i class="fas ' + f.def.icon + ' me-2"></i>';
-                h6.appendChild(document.createTextNode(f.def.title));
-                var p = document.createElement('p');
-                p.textContent = content;
-                card.appendChild(h6);
-                card.appendChild(p);
-                out.appendChild(card);
-            });
-            raw.style.display = 'none';
-        }
-    }
-})();
-</script>
 </body>
 </html>
