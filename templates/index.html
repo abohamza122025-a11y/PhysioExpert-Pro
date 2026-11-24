@@ -617,6 +617,19 @@
             <h3 class="fw-bold">لم يتم العثور على نتائج.</h3>
             <p class="text-muted">جرّب البحث بكلمات مثل: الركبة، الكتف، أو السكتة الدماغية.</p>
         </div>
+    {% else %}
+        <section class="panel-card p-4 p-md-5 text-center my-4" aria-label="إرشادات البحث">
+            <div class="glance-icon mx-auto mb-3" style="width:64px;height:64px;background:#efedff;color:#6258d9;font-size:1.5rem;">
+                <i class="fas fa-stethoscope" aria-hidden="true"></i>
+            </div>
+            <h2 class="h4 fw-bold mb-2">مرحبًا بك في Physio Expert Pro</h2>
+            <p class="text-muted mb-3">اكتب اسم الحالة المرضية في مربع البحث بالأعلى لعرض البروتوكول المتاح.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <span class="param-chip">خشونة الركبة</span>
+                <span class="param-chip">إصابة الرباط الصليبي</span>
+                <span class="param-chip">السكتة الدماغية</span>
+            </div>
+        </section>
     {% endif %}
 </div>
 
