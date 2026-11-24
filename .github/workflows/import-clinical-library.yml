@@ -66,13 +66,21 @@ jobs:
           python - <<'PY'
           import os
           from sqlalchemy import create_engine, text
+          from sqlalchemy.engine import make_url
 
           value = os.environ.get("DATABASE_URL")
           if not value:
               raise SystemExit("Database URL is missing")
 
+          url = make_url(value).set(
+              drivername="postgresql+psycopg2"
+          )
+
+          if url.database != "physioexpertpro_staging_db":
+              raise SystemExit("Blocked: unexpected database name")
+
           engine = create_engine(
-              value,
+              url,
               connect_args={"connect_timeout": 10}
           )
 
@@ -87,10 +95,14 @@ jobs:
                   ).scalar_one()
 
                   if database != "physioexpertpro_staging_db":
-                      raise SystemExit("Blocked: connected to unexpected database")
+                      raise SystemExit(
+                          "Blocked: connected to unexpected database"
+                      )
 
                   if result != 1:
-                      raise SystemExit("Database connection test failed")
+                      raise SystemExit(
+                          "Database connection test failed"
+                      )
 
                   print("Database connection successful.")
                   print("Verified staging database:", database)
