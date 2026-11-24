@@ -355,6 +355,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <form action="/" method="POST" class="position-relative">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="text" name="disease" class="form-control form-control-lg rounded-pill ps-4 py-3 shadow border-0 text-primary" placeholder="مثال: خشونة الركبة، إصابة الرباط الصليبي، السكتة الدماغية..." required style="font-size: 1rem; padding-right: 130px !important;">
                     <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold position-absolute end-0 top-0 bottom-0 m-2 shadow-sm d-flex align-items-center">
                         <i class="fas fa-search me-2"></i> ابحث
