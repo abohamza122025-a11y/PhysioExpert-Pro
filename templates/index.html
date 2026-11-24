@@ -129,20 +129,7 @@
 
     <style>
         /* ---------- Print ---------- */
-        @media print {
-            .no-print, .navbar, footer, .alert, .hero-section, form, .protocol-tabs, .print-hint { display: none !important; }
-            body { background: #fff !important; }
-            .container { margin-top: 0 !important; max-width: 100% !important; }
-            .tab-content > .tab-pane { display: block !important; opacity: 1 !important; }
-            .accordion-collapse { display: block !important; height: auto !important; }
-            .accordion-button::after { display: none; }
-            .print-title { display: block; font-weight: 700; color: #1e3c72; margin: 18px 0 8px; border-bottom: 2px solid #e6ecf5; padding-bottom: 4px; }
-            .panel-card, .modality-card, .glance-card, .note-card, .protocol-content li { page-break-inside: avoid; box-shadow: none !important; }
-            body::before {
-                content: "Physio Expert Pro - بروتوكول علاجي";
-                display: block; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px;
-            }
-        }
+       
 
         {% if not (current_user.can_print or current_user.is_admin) %}
         @media print {
