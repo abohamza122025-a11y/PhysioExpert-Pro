@@ -6,7 +6,9 @@ on:
     branches:
       - feature/exercise-images-staging
     paths:
+         paths:
       - scripts/clinical_import_mode.txt
+      - .github/workflows/import-clinical-library.yml
 
 permissions:
   contents: read
