@@ -364,57 +364,78 @@ def add_manual():
     except ValueError as exc:
         flash(str(exc), "danger")
         return redirect(url_for("admin_dashboard"))
-        
+
+    form = request.form
+    disease_name = form.get("disease_name", "").strip()
+    if not disease_name:
+        flash("Disease name is required.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
     p = Protocol(
-        disease_name=request.form['disease_name'],
-        category=request.form.get('category', 'General'),
-        keywords=request.form['keywords'],
-        description=request.form['description'],
-        estim_type=request.form['estim_type'],
-        estim_params=request.form['estim_params'],
-        estim_role=request.form['estim_role'],
-        us_type=request.form['us_type'],
-        us_params=request.form['us_params'],
-        us_role=request.form['us_role'],
-        exercises_list=sanitize_rich_html(request.form.get('exercises_list', '')),
-        exercises_role=request.form['exercises_role'],
-        ex_frequency=request.form.get('ex_frequency'),
-        ex_intensity=request.form.get('ex_intensity'),
-        ex_progression=request.form.get('ex_progression'),
-        evidence_level=request.form.get('evidence_level', 'Grade A'),
-        source_ref=request.form['source_ref'],
-        video_link=request.form.get('video_link'),
-        notes=request.form.get('notes'),
-        electrode_image=image_data
+        disease_name=disease_name,
+        category=form.get("category", "General").strip() or "General",
+        keywords=form.get("keywords", "").strip(),
+        description=form.get("description", "").strip(),
+        estim_type=form.get("estim_type", "").strip(),
+        estim_params=form.get("estim_params", "").strip(),
+        estim_role=form.get("estim_role", "").strip(),
+        # These fields are optional because the current admin form does not include them.
+        us_type=form.get("us_type", "").strip(),
+        us_params=form.get("us_params", "").strip(),
+        us_role=form.get("us_role", "").strip(),
+        exercises_list=sanitize_rich_html(form.get("exercises_list", "")),
+        exercises_role=form.get("exercises_role", "").strip(),
+        ex_frequency=form.get("ex_frequency"),
+        ex_intensity=form.get("ex_intensity"),
+        ex_progression=form.get("ex_progression"),
+        evidence_level=form.get("evidence_level", "Grade A"),
+        source_ref=form.get("source_ref", "").strip(),
+        video_link=form.get("video_link", "").strip(),
+        notes=form.get("notes", "").strip(),
+        electrode_image=image_data,
     )
-    db.session.add(p)
-    db.session.commit()
-    flash('Manual Protocol Added Successfully!', 'success')
-    return redirect(url_for('admin_dashboard'))
-    
+    try:
+        db.session.add(p)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Unable to add manual protocol")
+        flash("Unable to save the protocol. Please review the entered data.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    flash("Manual Protocol Added Successfully!", "success")
+    return redirect(url_for("admin_dashboard"))
+
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
 def edit_protocol(id):
     p = Protocol.query.get_or_404(id)
     if request.method == 'POST':
-        p.disease_name = request.form.get('disease_name')
-        p.category = request.form.get('category')
-        p.description = request.form.get('description')
-        p.keywords = request.form.get('keywords')
-        p.estim_type = request.form.get('estim_type')
-        p.estim_params = request.form.get('estim_params')
-        p.estim_role = request.form.get('estim_role')
-        p.us_type = request.form.get('us_type')
-        p.us_params = request.form.get('us_params')
-        p.us_role = request.form.get('us_role')
-        p.exercises_list = sanitize_rich_html(request.form.get('exercises_list', ''))
-        p.exercises_role = request.form.get('exercises_role')
-        p.ex_frequency = request.form.get('ex_frequency')
-        p.source_ref = request.form.get('source_ref')
-        p.video_link = request.form.get('video_link')
-        p.notes = request.form.get('notes')
-        p.video_link = request.form.get('video_link')
-        p.notes = request.form.get('notes')  # ده السطر اللي بيحفظ الملاحظات 
+        form = request.form
+        p.disease_name = form.get('disease_name', p.disease_name).strip()
+        p.category = form.get('category', p.category)
+        p.description = form.get('description', p.description)
+        p.keywords = form.get('keywords', p.keywords)
+        p.estim_type = form.get('estim_type', p.estim_type)
+        p.estim_params = form.get('estim_params', p.estim_params)
+        p.estim_role = form.get('estim_role', p.estim_role)
+        p.us_type = form.get('us_type', p.us_type)
+        p.us_params = form.get('us_params', p.us_params)
+        p.us_role = form.get('us_role', p.us_role)
+        p.exercises_list = sanitize_rich_html(form.get('exercises_list', p.exercises_list or ''))
+        p.exercises_role = form.get('exercises_role', p.exercises_role)
+        p.ex_frequency = form.get('ex_frequency', p.ex_frequency)
+        # Preserve these existing values unless a future form explicitly submits them.
+        if 'ex_intensity' in form:
+            p.ex_intensity = form.get('ex_intensity')
+        if 'ex_progression' in form:
+            p.ex_progression = form.get('ex_progression')
+        if 'evidence_level' in form:
+            p.evidence_level = form.get('evidence_level')
+        p.source_ref = form.get('source_ref', p.source_ref)
+        p.video_link = form.get('video_link', p.video_link)
+        p.notes = form.get('notes', p.notes)
+
         try:
             uploaded_image = read_safe_image_upload(request.files.get("electrode_image"))
             if uploaded_image:
@@ -423,10 +444,17 @@ def edit_protocol(id):
             flash(str(exc), "danger")
             return render_template("edit_protocol.html", protocol=p), 400
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Unable to update protocol %s", id)
+            flash("Unable to update the protocol. Please review the entered data.", "danger")
+            return render_template("edit_protocol.html", protocol=p), 400
+
         flash('Protocol Updated Successfully!', 'success')
         return redirect(url_for('admin_dashboard'))
-    
+
     return render_template('edit_protocol.html', protocol=p)
 
 @app.route('/admin/export-data')
@@ -609,15 +637,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=False)
-
-
-
-
-
-
-
-
-
-
-
-
