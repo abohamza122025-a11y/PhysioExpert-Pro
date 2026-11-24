@@ -25,7 +25,10 @@
             <nav class="nav flex-column">
                 <a class="nav-link text-white mb-3" href="/"><i class="fas fa-home me-2"></i> View Site</a>
                 <a class="nav-link text-white mb-3" href="#add-manual"><i class="fas fa-plus me-2"></i> Add New</a>
-                <form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="nav-link text-white mb-3 border-0 bg-transparent" type="submit"><i class="fas fa-sign-out-alt me-2"></i> Logout</button></form>
+                <form method="POST" action="{{ url_for('logout') }}" class="mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="nav-link text-white btn btn-link text-start"><i class="fas fa-sign-out-alt me-2"></i> Logout</button>
+                </form>
             </nav>
         </div>
 
@@ -48,7 +51,7 @@
                         <h6 class="fw-bold text-muted">Import Data</h6>
                         <p class="small text-secondary">ارفع ملف الإكسيل (Excel) لتحديث قاعدة البيانات دفعة واحدة.</p>
                         <form action="/admin/import-excel" method="POST" enctype="multipart/form-data" class="row g-2 align-items-center">
-<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="col-8">
                                 <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
                             </div>
@@ -74,7 +77,7 @@
                         <div class="card-body p-4">
                             <h4 class="section-title">Add New Clinical Protocol</h4>
                             <form action="/admin/add-manual" method="POST" enctype="multipart/form-data">
-<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <label class="form-label">Disease Name</label>
@@ -159,7 +162,10 @@
                                             <td>{{ p.category }}</td>
                                             <td class="text-center">
                                                 <a href="/admin/edit/{{ p.id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Edit</a>
-                                                <form action="{{ url_for('delete_protocol', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this protocol?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form>
+                                                <form method="POST" action="{{ url_for('delete_protocol', id=p.id) }}" class="d-inline" onsubmit="return confirm('Delete?')">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                                </form>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -190,7 +196,7 @@
                                         <td class="text-center">
                                             <form method="POST" action="{{ url_for('manual_reset', user_id=u.id) }}" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                                <input type="password" name="new_password" minlength="12" required class="form-control form-control-sm d-inline-block" style="width:160px" placeholder="New password">
+                                                <input type="password" name="new_password" minlength="12" required autocomplete="new-password" class="form-control form-control-sm d-inline-block" style="width:150px" placeholder="New password">
                                                 <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-key me-1"></i> Reset Password</button>
                                             </form>
 
