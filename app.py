@@ -58,9 +58,19 @@ GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-flash-latest')
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
 
 # إصلاح مشكلة اسم قاعدة البيانات في Render (postgres vs postgresql)
+# Force SQLAlchemy to use the installed psycopg2 driver.
 if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
+    db_url = db_url.replace(
+        "postgres://",
+        "postgresql+psycopg2://",
+        1
+    )
+elif db_url and db_url.startswith("postgresql://"):
+    db_url = db_url.replace(
+        "postgresql://",
+        "postgresql+psycopg2://",
+        1
+    )
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # ... (كود تصحيح رابط قاعدة البيانات موجود هنا)
