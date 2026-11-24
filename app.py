@@ -164,7 +164,37 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     subscription_end = db.Column(db.DateTime, nullable=True)
     can_print = db.Column(db.Boolean, default=False)
+    @property
+    def trial_end(self):
+        return (self.created_at or datetime.utcnow()) + timedelta(days=30)
 
+    @property
+    def is_paid(self):
+        return bool(
+            self.subscription_end
+            and self.subscription_end > datetime.utcnow()
+        )
+
+    @property
+    def in_trial(self):
+        return (
+            not self.is_paid
+            and datetime.utcnow() < self.trial_end
+        )
+
+    @property
+    def has_access(self):
+        return bool(self.is_admin or self.is_paid or self.in_trial)
+
+    @property
+    def days_left(self):
+        if self.is_admin:
+            return None
+
+        end = self.subscription_end if self.is_paid else self.trial_end
+        remaining = (end - datetime.utcnow()).total_seconds()
+
+        return max(int((remaining + 86399) // 86400), 0)
 class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # جعلنا التصنيف 200 للأمان
