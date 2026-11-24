@@ -53,20 +53,61 @@ jobs:
           if url.get_backend_name() != "postgresql":
               raise SystemExit("Only PostgreSQL is allowed")
 
-          if "staging" not in (url.database or "").lower():
-              raise SystemExit("Blocked: database name is not staging")
+          if url.database != "physioexpertpro_staging_db":
+              raise SystemExit("Blocked: unexpected database name")
 
           print("Staging database target verified.")
+          PY
+
+      - name: Test actual database connection
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+
+          value = os.environ.get("DATABASE_URL")
+          if not value:
+              raise SystemExit("Database URL is missing")
+
+          engine = create_engine(
+              value,
+              connect_args={"connect_timeout": 10}
+          )
+
+          try:
+              with engine.connect() as connection:
+                  database = connection.execute(
+                      text("SELECT current_database()")
+                  ).scalar_one()
+
+                  result = connection.execute(
+                      text("SELECT 1")
+                  ).scalar_one()
+
+                  if database != "physioexpertpro_staging_db":
+                      raise SystemExit("Blocked: connected to unexpected database")
+
+                  if result != 1:
+                      raise SystemExit("Database connection test failed")
+
+                  print("Database connection successful.")
+                  print("Verified staging database:", database)
+          finally:
+              engine.dispose()
           PY
 
       - name: Validate import mode
         id: mode
         run: |
           MODE="$(tr -d '[:space:]' < scripts/clinical_import_mode.txt)"
+
           if [ "$MODE" != "DRY_RUN" ] && [ "$MODE" != "APPLY" ]; then
             echo "Invalid import mode. Use DRY_RUN or APPLY."
             exit 1
           fi
+
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "Import mode: $MODE"
 
