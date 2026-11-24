@@ -5,6 +5,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort, session
 from sqlalchemy import text
+from html import escape as html_escape
 from io import BytesIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -58,19 +59,9 @@ GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-flash-latest')
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
 
 # إصلاح مشكلة اسم قاعدة البيانات في Render (postgres vs postgresql)
-# Force SQLAlchemy to use the installed psycopg2 driver.
 if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace(
-        "postgres://",
-        "postgresql+psycopg2://",
-        1
-    )
-elif db_url and db_url.startswith("postgresql://"):
-    db_url = db_url.replace(
-        "postgresql://",
-        "postgresql+psycopg2://",
-        1
-    )
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # ... (كود تصحيح رابط قاعدة البيانات موجود هنا)
@@ -299,47 +290,212 @@ def toggle_print(user_id):
     flash(f"Printing permission updated for {user.email}.", "info")
     return redirect(url_for("admin_dashboard"))
 
-@app.route('/', methods=['GET', 'POST'])
-@login_required
-def home():
-    if not current_user.is_admin:
-        days_passed = (datetime.utcnow() - current_user.created_at).days
-        days_left = 30 - days_passed
-        has_extended_sub = current_user.subscription_end and current_user.subscription_end > datetime.utcnow()
-        if days_left <= 0 and not has_extended_sub:
-            return redirect(url_for('subscription_expired'))
-    else:
-        days_left = "Unlimited (Admin)"
 
+# ==========================================
+# Clinical Library: search + presentation adapter
+# ==========================================
+def _clinical_text(value):
+    return " ".join(str(value or "").strip().casefold().split())
+
+
+def _clinical_condition_score(condition, query):
+    """Match canonical names, aliases, and preserved source names in EN/AR."""
+    q = _clinical_text(query)
+    if not q:
+        return 0
+    names = []
+    canonical = condition.canonical_name or {}
+    if isinstance(canonical, dict):
+        names.extend([canonical.get("en", ""), canonical.get("ar", "")])
+    aliases = condition.aliases or []
+    if isinstance(aliases, list):
+        for alias in aliases:
+            if isinstance(alias, dict):
+                names.extend([alias.get("en", ""), alias.get("ar", "")])
+    source_records = condition.source_records or []
+    if isinstance(source_records, list):
+        names.extend(r.get("original_name", "") for r in source_records if isinstance(r, dict))
+
+    best = 0
+    for name in names:
+        n = _clinical_text(name)
+        if not n:
+            continue
+        if q == n:
+            best = max(best, 100)
+        elif q in n:
+            best = max(best, 80)
+        elif n in q:
+            best = max(best, 65)
+    return best
+
+
+def _clinical_protocol_result(condition, protocol):
+    """Adapt the normalized clinical tables to the existing index.html contract."""
+    Models = CLINICAL_MODELS
+    Phase = Models["ClinicalProtocolPhase"]
+    Exercise = Models["ClinicalExercise"]
+    PhaseExercise = Models["ClinicalPhaseExercise"]
+
+    content = protocol.content_en or {}
+    presentation = content.get("clinical_presentation") or {}
+    notes = content.get("clinical_notes") or {}
+    summary = content.get("summary") or {}
+    electro = content.get("electrotherapy") or []
+    ultrasound = content.get("ultrasound") or {}
+
+    # Escape source strings before creating the small HTML fragment consumed by the template.
+    phase_html = []
+    phases = (Phase.query.filter_by(protocol_id=protocol.protocol_id)
+              .order_by(Phase.sort_order.asc()).all())
+    for phase in phases:
+        phase_content = phase.content_en or {}
+        phase_name = html_escape(str(phase_content.get("name") or phase.phase_key or "Phase"))
+        phase_goal = html_escape(str(phase_content.get("goal") or ""))
+        phase_html.append(f"<h4>{phase_name}{(': ' + phase_goal) if phase_goal else ''}</h4><ul>")
+        linked = (db.session.query(Exercise, PhaseExercise)
+                  .join(PhaseExercise, PhaseExercise.exercise_id == Exercise.exercise_id)
+                  .filter(PhaseExercise.phase_id == phase.phase_id)
+                  .order_by(PhaseExercise.sort_order.asc()).all())
+        for exercise, link in linked:
+            ex = exercise.content_en or {}
+            ex_name = html_escape(str(ex.get("name") or "Exercise"))
+            instructions = html_escape(str(ex.get("instructions") or ""))
+            dosage = html_escape(str(ex.get("dosage") or ""))
+            phase_html.append("<li><b>" + ex_name + "</b>" +
+                              ("<span>" + instructions + "</span>" if instructions else "") +
+                              ("<i>" + dosage + "</i>" if dosage else "") + "</li>")
+        phase_html.append("</ul>")
+
+    electro_types, electro_params, electro_goals = [], [], []
+    for item in electro if isinstance(electro, list) else []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type"):
+            electro_types.append(str(item["type"]))
+        if item.get("parameters"):
+            electro_params.append(str(item["parameters"]))
+        if item.get("placement_guide"):
+            electro_params.append("Placement: " + str(item["placement_guide"]))
+        if item.get("goal"):
+            electro_goals.append(str(item["goal"]))
+
+    ultrasound_regimens = ultrasound.get("regimens") or []
+    ultrasound_lines = []
+    if ultrasound.get("summary"):
+        ultrasound_lines.append(str(ultrasound["summary"]))
+    for regimen in ultrasound_regimens:
+        if isinstance(regimen, dict):
+            ultrasound_lines.append(" | ".join(f"{k}: {v}" for k, v in regimen.items() if v not in (None, "")))
+        else:
+            ultrasound_lines.append(str(regimen))
+    ultrasound_lines.extend(str(x) for x in (ultrasound.get("cautions") or []))
+
+    canonical = condition.canonical_name or {}
+    display_name = (canonical.get("ar") or canonical.get("en") or protocol.source_condition_name
+                    if isinstance(canonical, dict) else protocol.source_condition_name)
+    short_summary = summary.get("definition_short") or ""
+    description = presentation.get("definition") or short_summary
+    notes_text = "\n\n".join(part for part in [
+        "Diagnosis: " + str(notes.get("assessment_diagnosis", "")) if notes.get("assessment_diagnosis") else "",
+        "Manual Therapy: " + str(notes.get("manual_therapy", "")) if notes.get("manual_therapy") else "",
+        "Precautions: " + str(notes.get("precautions", "")) if notes.get("precautions") else "",
+        "Ultrasound cautions: " + "; ".join(str(x) for x in (ultrasound.get("cautions") or [])) if ultrasound.get("cautions") else "",
+    ] if part)
+
+    return {
+        "disease_name": display_name,
+        "category": protocol.specialty or condition.specialty or "General",
+        "keywords": ", ".join([display_name, protocol.source_condition_name or "", protocol.specialty or ""]),
+        "description": description,
+        "estim_type": ", ".join(electro_types),
+        "estim_params": "\n".join(electro_params),
+        "estim_role": "\n".join(electro_goals),
+        "us_type": ultrasound.get("status") or ("Ultrasound" if ultrasound else ""),
+        "us_params": "\n".join(ultrasound_lines),
+        "us_role": ultrasound.get("goal") or "",
+        "exercises_list": "".join(phase_html),
+        "exercises_role": "Progressive rehabilitation phases",
+        "ex_frequency": "",
+        "ex_intensity": "",
+        "ex_progression": "",
+        "evidence_level": "",
+        "source_ref": content.get("scientific_reference") or "",
+        "electrode_image": "",
+        "video_link": "",
+        "notes": notes_text,
+        "clinical_warning": "هذا البروتوكول قيد المراجعة ولم يحصل على اعتماد سريري. يجب مراجعته وتكييفه مع تقييم المريض والإرشادات المعتمدة قبل الاستخدام.",
+        "clinical_status": protocol.clinical_approval_status or "not_approved",
+        "is_clinical_library": True,
+        "source_record_id": protocol.source_record_id,
+    }
+
+
+def find_clinical_protocol(query):
+    """Search the 80-item registry in both languages and resolve via condition_id."""
+    Models = CLINICAL_MODELS
+    conditions = Models["ClinicalCondition"].query.all()
+    scored = [( _clinical_condition_score(c, query), c) for c in conditions]
+    scored = [(score, condition) for score, condition in scored if score > 0]
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    # Try the best-matching condition first. For consolidated diagnoses, prefer
+    # the source protocol whose original name best matches the user's wording.
+    best_score, condition = scored[0]
+    protocols = Models["ClinicalProtocol"].query.filter_by(condition_id=condition.condition_id).all()
+    if not protocols:
+        return None
+    q = _clinical_text(query)
+    protocols.sort(key=lambda p: (100 if q == _clinical_text(p.source_condition_name) else
+                                  80 if q in _clinical_text(p.source_condition_name) else 0), reverse=True)
+    return _clinical_protocol_result(condition, protocols[0])
+
+
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    # الزائر غير المسجل يشوف صفحة الهبوط
+    if not current_user.is_authenticated:
+        return render_template('landing.html')
+
+    if not current_user.has_access:
+        return redirect(url_for('subscription_expired'))
+
+    days_left = "Unlimited (Admin)" if current_user.is_admin else current_user.days_left
     result = None
-    # 1. استلام الكلمة من المستخدم
     raw_query = request.args.get('disease') or request.form.get('disease')
-    
+
     if raw_query:
-        # 🧼 خطوة التنظيف الشاملة:
-        # 1. strip: تشيل المسافات من الأول والآخر
-        # 2. split + join: تحول أي مسافات مزدوجة في النص لمسافة واحدة
         clean_query = " ".join(raw_query.strip().split())
 
-        # 🎯 تجهيز مصطلح البحث (علامة % معناها: هات أي حاجة قبلها أو بعدها)
-        term = f"%{clean_query}%"
+        # 1) المكتبة السريرية الجديدة: canonical names + aliases EN/AR.
+        try:
+            result = find_clinical_protocol(clean_query)
+        except Exception as exc:
+            # Keep the legacy system available, but expose the failure in logs.
+            app.logger.exception("Clinical library search failed: %s", exc)
+            result = None
 
-        # 🔍 البحث في قاعدة البيانات
-        result = Protocol.query.filter(
-            (Protocol.disease_name.ilike(term)) |  # يبحث في الاسم
-            (Protocol.keywords.ilike(term))        # يبحث في الكلمات الدلالية
-        ).first()
+        # 2) Legacy protocol table remains unchanged as a fallback.
+        if not result:
+            term = f"%{clean_query}%"
+            result = Protocol.query.filter(
+                (Protocol.disease_name.ilike(term)) |
+                (Protocol.keywords.ilike(term))
+            ).first()
 
-        # 🤖 لو ملقاش في الداتابيز، يسأل الذكاء الاصطناعي بالكلمة النظيفة
+        # 3) Preserve the existing AI fallback for terms absent from both libraries.
         if not result:
             result = get_ai_protocol(clean_query)
-    
-    if result:
-        if isinstance(result, dict):
-            result["exercises_list"] = sanitize_rich_html(result.get("exercises_list", ""))
-        else:
+
+        if result and not isinstance(result, dict):
             result.exercises_list = sanitize_rich_html(result.exercises_list or "")
+        elif isinstance(result, dict) and not result.get("is_clinical_library"):
+            result["exercises_list"] = sanitize_rich_html(result.get("exercises_list", ""))
+
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
+
 
 @app.route('/subscription')
 def subscription_expired():
