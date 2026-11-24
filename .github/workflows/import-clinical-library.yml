@@ -6,7 +6,6 @@ on:
     branches:
       - feature/exercise-images-staging
     paths:
-         paths:
       - scripts/clinical_import_mode.txt
       - .github/workflows/import-clinical-library.yml
 
@@ -91,7 +90,6 @@ jobs:
 
           try:
               with engine.connect() as connection:
-
                   database = connection.execute(
                       text("SELECT current_database()")
                   ).scalar_one()
