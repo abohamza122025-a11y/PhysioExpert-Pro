@@ -1,11 +1,19 @@
 
-name: Import Clinical Library to Staging
+name: Staging Clinical Library Import
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - feature/exercise-images-staging
+    paths:
+      - scripts/clinical_import_mode.txt
 
 permissions:
   contents: read
+
+concurrency:
+  group: staging-clinical-import
+  cancel-in-progress: false
 
 jobs:
   import:
@@ -51,7 +59,27 @@ jobs:
           print("Staging database target verified.")
           PY
 
-      - name: Import clinical library
+      - name: Validate import mode
+        id: mode
+        run: |
+          MODE="$(tr -d '[:space:]' < scripts/clinical_import_mode.txt)"
+          if [ "$MODE" != "DRY_RUN" ] && [ "$MODE" != "APPLY" ]; then
+            echo "Invalid import mode. Use DRY_RUN or APPLY."
+            exit 1
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Import mode: $MODE"
+
+      - name: Run dry validation
+        if: steps.mode.outputs.mode == 'DRY_RUN'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          CLINICAL_IMPORT_TARGET: staging
+        run: |
+          python scripts/import_clinical_library.py --confirm-staging
+
+      - name: Apply clinical library to staging
+        if: steps.mode.outputs.mode == 'APPLY'
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
           CLINICAL_IMPORT_TARGET: staging
