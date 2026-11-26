@@ -775,40 +775,50 @@ def delete_protocol(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    disease = (request.values.get('disease') or '').strip()[:200]
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for('home'))
-        else:
-            flash('Login Failed. Check email/password', 'danger')
-    return render_template('login.html')
+            return redirect(url_for('home', disease=disease) if disease else url_for('home'))
+        flash('Login Failed. Check email/password', 'danger')
+        return render_template('login.html', email=email, disease=disease), 401
+    return render_template('login.html', disease=disease)
+
 
 @app.route('/forgot-password')
 def forgot_password(): return render_template('forgot_password.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    disease = (request.values.get('disease') or '').strip()[:200]
     if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if len(password) < 12:
+            flash('Password must be at least 12 characters.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        if not email or len(email) > 150 or '@' not in email:
+            flash('Enter a valid email address.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        if User.query.filter_by(email=email).first():
+            flash('This email is already registered. Please log in.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
         try:
-            email = request.form.get('email', '').strip().lower()
-            password = request.form.get('password', '')
-            if len(password) < 12:
-                flash('Password must be at least 12 characters.', 'danger')
-                return render_template('register.html'), 400
-            if not email or len(email) > 150 or '@' not in email:
-                flash('Enter a valid email address.', 'danger')
-                return render_template('register.html'), 400
-            pw = generate_password_hash(password, method='pbkdf2:sha256')
-            db.session.add(User(email=email, password=pw))
+            user = User(email=email, password=generate_password_hash(password, method='pbkdf2:sha256'))
+            db.session.add(user)
             db.session.commit()
-            return redirect(url_for('login'))
         except Exception:
             db.session.rollback()
-            flash('Unable to create account. The email may already exist.', 'danger')
-    return render_template('register.html')
+            flash('Unable to create account. Please try again.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        login_user(user)
+        return redirect(url_for('home', disease=disease) if disease else url_for('home'))
+    return render_template('register.html', disease=disease)
+
 
 @app.route('/logout', methods=['POST'])
 @login_required
