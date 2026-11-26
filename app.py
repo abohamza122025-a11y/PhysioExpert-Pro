@@ -836,6 +836,12 @@ def import_generated_json():
     abort(405)
 with app.app_context():
     db.create_all()
+    _admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    if _admin_email:
+        _u = User.query.filter(db.func.lower(User.email) == _admin_email).first()
+        if _u and not _u.is_admin:
+            _u.is_admin = True
+            db.session.commit()
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
