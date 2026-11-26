@@ -25,10 +25,7 @@
             <nav class="nav flex-column">
                 <a class="nav-link text-white mb-3" href="/"><i class="fas fa-home me-2"></i> View Site</a>
                 <a class="nav-link text-white mb-3" href="#add-manual"><i class="fas fa-plus me-2"></i> Add New</a>
-                <form method="POST" action="{{ url_for('logout') }}" class="mt-2">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit" class="nav-link text-white btn btn-link text-start"><i class="fas fa-sign-out-alt me-2"></i> Logout</button>
-                </form>
+                <a class="nav-link text-white" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
             </nav>
         </div>
 
@@ -49,9 +46,11 @@
                 <div class="row g-4">
                     <div class="col-md-7 border-end">
                         <h6 class="fw-bold text-muted">Import Data</h6>
-                        <p class="small text-secondary">ارفع ملف الإكسيل (Excel) لتحديث قاعدة البيانات دفعة واحدة.</p>
+                        <p class="small text-secondary">حمّل قالب الإكسيل (فيه كل الحالات الحالية)، عدّله، وارفعه هنا لتحديث كل البروتوكولات دفعة واحدة.</p>
+                        <a href="{{ url_for('download_template') }}" class="btn btn-outline-success btn-sm mb-3">
+                            <i class="fas fa-file-excel me-1"></i> Download Editable Template (.xlsx)
+                        </a>
                         <form action="/admin/import-excel" method="POST" enctype="multipart/form-data" class="row g-2 align-items-center">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="col-8">
                                 <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
                             </div>
@@ -77,7 +76,6 @@
                         <div class="card-body p-4">
                             <h4 class="section-title">Add New Clinical Protocol</h4>
                             <form action="/admin/add-manual" method="POST" enctype="multipart/form-data">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <label class="form-label">Disease Name</label>
@@ -92,6 +90,7 @@
                                             <option value="Sports Medicine">Sports Medicine</option>
                                             <option value="Geriatrics">Geriatrics</option>
                                             <option value="Cardiopulmonary">Cardiopulmonary</option>
+                                            <option value="Integumentary">Integumentary</option>
                                         </select>
                                     </div>
                                     <div class="col-md-4">
@@ -106,6 +105,10 @@
                                     <div class="col-md-4"><input type="text" name="estim_type" class="form-control" placeholder="Electro Type"></div>
                                     <div class="col-md-4"><input type="text" name="estim_params" class="form-control" placeholder="Electro Params"></div>
                                     <div class="col-md-4"><input type="text" name="estim_role" class="form-control" placeholder="Electro Role"></div>
+
+                                    <div class="col-md-4"><input type="text" name="us_type" class="form-control" placeholder="Ultrasound Type"></div>
+                                    <div class="col-md-4"><input type="text" name="us_params" class="form-control" placeholder="Ultrasound Params (e.g. 3 MHz | Pulsed 20% | 1.0 W/cm2 | 5 min)"></div>
+                                    <div class="col-md-4"><input type="text" name="us_role" class="form-control" placeholder="Ultrasound Role"></div>
 
                                     <div class="col-md-6">
                                         <label class="form-label">Exercises List</label>
@@ -162,10 +165,7 @@
                                             <td>{{ p.category }}</td>
                                             <td class="text-center">
                                                 <a href="/admin/edit/{{ p.id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Edit</a>
-                                                <form method="POST" action="{{ url_for('delete_protocol', id=p.id) }}" class="d-inline" onsubmit="return confirm('Delete?')">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                                                </form>
+                                                <a href="/admin/delete/{{ p.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -181,31 +181,76 @@
                         <div class="card-header bg-warning text-dark p-3">
                             <h5 class="mb-0"><i class="fas fa-users me-2"></i> Registered Students Management</h5>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0 table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light text-center">
                                     <tr>
                                         <th class="text-start ps-4">Student Email</th>
-                                        <th>Security & Permissions</th>
+                                        <th>Status</th>
+                                        <th>Ends</th>
+                                        <th>Printing</th>
+                                        <th>Subscription</th>
+                                        <th>Security</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for u in users %}
-                                    <tr>
-                                        <td class="ps-4 fw-bold">{{ u.email }}</td>
-                                        <td class="text-center">
-                                            <form method="POST" action="{{ url_for('manual_reset', user_id=u.id) }}" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                                <input type="password" name="new_password" minlength="12" required autocomplete="new-password" class="form-control form-control-sm d-inline-block" style="width:150px" placeholder="New password">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-key me-1"></i> Reset Password</button>
-                                            </form>
+                                    <tr class="text-center">
+                                        <td class="ps-4 fw-bold text-start">{{ u.email }}</td>
 
-                                            <form method="POST" action="{{ url_for('toggle_print', user_id=u.id) }}" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                                <button type="submit" class="btn btn-sm {{ 'btn-success' if u.can_print else 'btn-secondary' }} ms-2">
-                                                    <i class="fas fa-print"></i> {{ 'Allowed' if u.can_print else 'Blocked' }}
+                                        <td>
+                                            {% if u.is_admin %}
+                                                <span class="badge bg-dark">Admin</span>
+                                            {% elif u.is_paid %}
+                                                <span class="badge bg-success">{{ u.status_label }}</span>
+                                            {% elif u.in_trial %}
+                                                <span class="badge bg-info text-dark">{{ u.status_label }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Expired</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="small text-muted">
+                                            {% if u.is_paid %}{{ u.subscription_end.strftime('%Y-%m-%d') }}{% else %}-{% endif %}
+                                        </td>
+
+                                        <td>
+                                            <span class="badge {{ 'bg-success' if u.can_print else 'bg-secondary' }}">
+                                                <i class="fas fa-print"></i> {{ 'Allowed' if u.can_print else 'Blocked' }}
+                                            </span>
+                                            {% if u.is_paid and not u.is_admin %}
+                                            <a href="/admin/toggle-print/{{ u.id }}"
+                                               class="btn btn-sm {{ 'btn-warning' if u.can_print_override else 'btn-outline-secondary' }} ms-1"
+                                               title="Allow printing before the 24-hour wait (paid users only)">
+                                                {{ 'Early print: ON' if u.can_print_override else 'Early print' }}
+                                            </a>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            {% if not u.is_admin %}
+                                            <form method="post" action="{{ url_for('admin_activate', user_id=u.id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Activate / renew 30 days for {{ u.email }}?')">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check-circle me-1"></i> Activate +30d
                                                 </button>
                                             </form>
+                                            {% if u.is_paid %}
+                                            <form method="post" action="{{ url_for('admin_cancel_subscription', user_id=u.id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Cancel subscription and refund {{ u.email }}?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
+                                                    <i class="fas fa-undo me-1"></i> Cancel / Refund
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="let p = prompt('Enter new password for: {{ u.email }}'); if(p) window.location.href='/admin/reset-user-password/{{ u.email }}/' + encodeURIComponent(p);">
+                                                <i class="fas fa-key me-1"></i> Reset Password
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endfor %}
