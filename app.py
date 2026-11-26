@@ -1,24 +1,25 @@
 import os
 import re
-import json
 import math
 import base64
-import hashlib
-from io import BytesIO
-from html.parser import HTMLParser
+import pandas as pd
 from functools import wraps
 from datetime import datetime, timedelta
-
-import pandas as pd
-from flask import (Flask, render_template, request, redirect, url_for,
-                   flash, send_file)
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import (LoginManager, UserMixin, login_user, login_required,
-                         logout_user, current_user)
-from markupsafe import escape
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort, session
 from sqlalchemy import text, inspect
+from html import escape as html_escape
+from html.parser import HTMLParser
+from markupsafe import escape
+from io import BytesIO
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+import json
+import secrets
+import hmac
+import nh3
 
 # ==========================================
 # إعدادات التطبيق
@@ -30,45 +31,128 @@ app = Flask(__name__)
 # ==========================================
 TRIAL_DAYS = 30          # التجربة المجانية
 SUB_DAYS = 30            # مدة الاشتراك الشهري
-PRINT_WAIT_HOURS = 24    # الطباعة تتفعل بعد أول 24 ساعة من الاشتراك المدفوع
+PRINT_WAIT_HOURS = 24    # الطباعة تتفتح بعد أول 24 ساعة من الاشتراك المدفوع
+
+# استخدام متغير البيئة للمفتاح السري، أو قيمة احتياطية عشوائية للأمان
+# In hosted environments, never fall back to a public/default signing key.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if os.environ.get('RENDER') and (not SECRET_KEY or len(SECRET_KEY) < 32):
+    raise RuntimeError("A strong SECRET_KEY (at least 32 characters) must be configured in Render.")
+app.secret_key = SECRET_KEY or os.urandom(32)
+
+# Secure session and request defaults. HTTPS-only cookies are enabled on Render.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=bool(os.environ.get('RENDER')),
+    SESSION_COOKIE_SAMESITE='Lax',
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,
+)
 
 # ==========================================
-# قاعدة البيانات
+# إعدادات الذكاء الاصطناعي (مؤمنة)
+# ==========================================
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# التحقق من وجود المفتاح قبل تشغيل التطبيق
+if not GEMINI_API_KEY:
+    # هذا التنبيه سيظهر في السجلات (Logs) إذا نسينا وضع المفتاح في Render
+    print("Warning: GEMINI_API_KEY not found in environment variables.")
+else:
+    pass
+
+# Official, actively maintained Google Gen AI SDK client.
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-flash-latest')
+
+# ==========================================
+# إعدادات قاعدة البيانات
 # ==========================================
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-# المفتاح السري: لو مش متضبط في Render نستخدم قيمة ثابتة مشتقة من رابط قاعدة البيانات
-# (مش قيمة افتراضية معروفة للناس). الأفضل تضبط SECRET_KEY في Render.
-_secret = os.environ.get('SECRET_KEY')
-if not _secret:
-    print("WARNING: SECRET_KEY is not set. Set it in Render > Environment.")
-    _secret = hashlib.sha256(("physio-" + db_url).encode()).hexdigest()
-app.secret_key = _secret
+from sqlalchemy.engine import make_url
+
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///physio.db')
+
+if db_url.startswith(('postgres://', 'postgresql://', 'postgresql+psycopg://', 'postgresql+psycopg2://')):
+    parsed_url = make_url(db_url)
+    db_url = parsed_url.set(
+        drivername='postgresql+psycopg2'
+    ).render_as_string(hide_password=False)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True}
 
+
+# ده السطر القديم اللي موجود عندك، خليه زي ما هو
 db = SQLAlchemy(app)
+
+# New clinical library models use separate clinical_* tables.
+# They do not replace the legacy User or Protocol models.
+from clinical_models import register_clinical_models
+CLINICAL_MODELS = register_clinical_models(db)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# ==========================================
-# الذكاء الاصطناعي
-# ==========================================
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    print("Warning: GEMINI_API_KEY not found in environment variables.")
-else:
-    genai.configure(api_key=GEMINI_API_KEY)
+# CSRF protection for every state-changing POST form.
+@app.before_request
+def enforce_csrf():
+    if request.method == "POST":
+        supplied = request.form.get("csrf_token", "")
+        expected = session.get("_csrf_token", "")
+        if not supplied or not expected or not hmac.compare_digest(supplied, expected):
+            abort(400, description="CSRF validation failed.")
 
-model = genai.GenerativeModel('gemini-1.5-flash')
+@app.context_processor
+def inject_csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+    return {"csrf_token": session["_csrf_token"]}
 
+def sanitize_rich_html(value):
+    # class على <p> مسموح (علشان phase-goal بتاع أهداف المراحل). باقي الـ attributes ممنوعة.
+    return nh3.clean(
+        value or "",
+        tags={"b", "strong", "i", "em", "u", "p", "br", "ul", "ol", "li", "h4", "h5", "hr"},
+        attributes={"p": {"class"}},
+        url_schemes=set(),
+        strip_comments=True,
+    )
 
+def read_safe_image_upload(upload):
+    if not upload or not upload.filename:
+        return ""
+    raw = upload.stream.read(2 * 1024 * 1024 + 1)
+    if len(raw) > 2 * 1024 * 1024:
+        raise ValueError("Image exceeds the 2 MB limit.")
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        mime = "image/png"
+    elif raw.startswith(b"\xff\xd8\xff"):
+        mime = "image/jpeg"
+    elif raw.startswith(b"RIFF") and raw[8:12] == b"WEBP":
+        mime = "image/webp"
+    else:
+        raise ValueError("Only valid PNG, JPEG, or WEBP image files are accepted.")
+    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+
+# ... هنا يكمل باقي الكود الخاص بالـ Routes والـ Functions ...
 # --- بيانات الموقع الثابتة ---
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    response.headers.setdefault('Content-Security-Policy',
+        "default-src 'self' https: data:; img-src 'self' https: data:; "
+        "style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; "
+        "font-src 'self' https: data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
+    if os.environ.get('RENDER'):
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    return response
+
 @app.context_processor
 def inject_global_vars():
     return dict(
@@ -76,187 +160,12 @@ def inject_global_vars():
         disclaimer="Disclaimer: For educational purposes only."
     )
 
-
 # --- الفلاتر ---
 @app.template_filter('split_list')
 def split_list_filter(s):
-    if not s:
-        return []
+    if not s: return []
     return [item.strip() for item in s.split(',')]
 
-
-# ==========================================
-# الجداول (Models)
-# ==========================================
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    subscription_end = db.Column(db.DateTime, nullable=True)
-    # تاريخ بداية الاشتراك المدفوع (لحساب أول 24 ساعة)
-    subscribed_at = db.Column(db.DateTime, nullable=True)
-    # عمود can_print القديم بقى "استثناء يدوي من الأدمن" للمشتركين فقط
-    can_print_override = db.Column('can_print', db.Boolean, default=False)
-
-    # ---------- حالة الاشتراك ----------
-    @property
-    def trial_end(self):
-        return (self.created_at or datetime.utcnow()) + timedelta(days=TRIAL_DAYS)
-
-    @property
-    def is_paid(self):
-        return bool(self.subscription_end and self.subscription_end > datetime.utcnow())
-
-    @property
-    def in_trial(self):
-        return (not self.is_paid) and datetime.utcnow() < self.trial_end
-
-    @property
-    def has_access(self):
-        return bool(self.is_admin or self.is_paid or self.in_trial)
-
-    @property
-    def days_left(self):
-        if self.is_admin:
-            return None
-        end = self.subscription_end if self.is_paid else self.trial_end
-        secs = (end - datetime.utcnow()).total_seconds()
-        return max(math.ceil(secs / 86400), 0)
-
-    @property
-    def can_print(self):
-        """الطباعة: للأدمن دايمًا. للمشترك بعد 24 ساعة. التجربة المجانية: ممنوعة."""
-        if self.is_admin:
-            return True
-        if not self.is_paid:
-            return False
-        if self.can_print_override:
-            return True
-        if self.subscribed_at is None:      # مشتركين قدام قبل إضافة التاريخ
-            return True
-        unlock = self.subscribed_at + timedelta(hours=PRINT_WAIT_HOURS)
-        return datetime.utcnow() >= unlock
-
-    @property
-    def status_label(self):
-        if self.is_admin:
-            return "Admin"
-        if self.is_paid:
-            return f"Paid - {self.days_left} days left"
-        if self.in_trial:
-            return f"Trial - {self.days_left} days left"
-        return "Expired"
-
-
-class Protocol(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(200), default="General")
-    disease_name = db.Column(db.String(200), nullable=False)
-    keywords = db.Column(db.Text)
-    description = db.Column(db.Text)
-
-    estim_type = db.Column(db.String(200))
-    estim_params = db.Column(db.Text)
-    estim_role = db.Column(db.Text)
-
-    us_type = db.Column(db.String(200))
-    us_params = db.Column(db.Text)
-    us_role = db.Column(db.Text)
-
-    exercises_list = db.Column(db.Text)
-    exercises_role = db.Column(db.Text)
-
-    ex_frequency = db.Column(db.Text)
-    ex_intensity = db.Column(db.Text)
-    ex_progression = db.Column(db.Text)
-
-    evidence_level = db.Column(db.Text)
-    source_ref = db.Column(db.Text)
-
-    electrode_image = db.Column(db.Text)
-    video_link = db.Column(db.Text)
-    notes = db.Column(db.Text, nullable=True)
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('Admin access required', 'danger')
-            return redirect(url_for('home'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-# ==========================================
-# تحديث الجداول تلقائيًا عند التشغيل
-# (بيضيف الأعمدة الناقصة من غير ما يمسح بيانات)
-# ==========================================
-def ensure_schema():
-    messages = []
-    try:
-        with app.app_context():
-            db.create_all()
-            insp = inspect(db.engine)
-            wanted = {
-                'user': [('can_print', 'BOOLEAN DEFAULT FALSE'),
-                         ('subscribed_at', 'TIMESTAMP')],
-                'protocol': [('video_link', 'TEXT'), ('notes', 'TEXT')],
-            }
-            for table, cols in wanted.items():
-                existing = {c['name'] for c in insp.get_columns(table)}
-                for name, ctype in cols:
-                    if name in existing:
-                        continue
-                    try:
-                        with db.engine.begin() as conn:
-                            conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {name} {ctype}'))
-                        messages.append(f"added {table}.{name}")
-                    except Exception as e:
-                        messages.append(f"{table}.{name}: {e}")
-    except Exception as e:
-        print(f"ensure_schema error: {e}")
-        messages.append(str(e))
-    return messages
-
-
-ensure_schema()
-
-
-# ==========================================
-# منع الطباعة (Ctrl+P) لغير المصرّح لهم - من السيرفر
-# ==========================================
-PRINT_LOCK_CSS = (
-    '<style>@media print{body{display:none!important}'
-    'html::before{content:"Printing is available for paid subscribers '
-    '24 hours after activation.";display:block;padding:40px;font:20px sans-serif}}</style>'
-)
-
-
-@app.after_request
-def lock_printing(resp):
-    try:
-        if (resp.mimetype == 'text/html' and not resp.direct_passthrough
-                and current_user.is_authenticated and not current_user.can_print):
-            html = resp.get_data(as_text=True)
-            if '</head>' in html:
-                resp.set_data(html.replace('</head>', PRINT_LOCK_CSS + '</head>', 1))
-    except Exception as e:
-        print(f"print-lock error: {e}")
-    return resp
-
-
-# ==========================================
-# معاملات الموجات فوق الصوتية (Ultrasound) لكل الحالات
-# القيم مبنية على المعاملات العلاجية الشائعة، راجعها على المرجع اللي بتعتمد عليه.
-# ==========================================
 NONE3 = ("None", "None", "None")
 
 US_RULES = {
@@ -569,18 +478,166 @@ def apply_us_rule(p):
     return True
 
 
+
+
+# --- 2. الجداول (Models) ---
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    subscription_end = db.Column(db.DateTime, nullable=True)
+    # تاريخ بداية الاشتراك المدفوع (لحساب أول 24 ساعة قبل الطباعة)
+    subscribed_at = db.Column(db.DateTime, nullable=True)
+    # عمود can_print القديم بقى "استثناء يدوي من الأدمن" للمشتركين فقط
+    can_print_override = db.Column('can_print', db.Boolean, default=False)
+
+    @property
+    def trial_end(self):
+        return (self.created_at or datetime.utcnow()) + timedelta(days=TRIAL_DAYS)
+
+    @property
+    def is_paid(self):
+        return bool(
+            self.subscription_end
+            and self.subscription_end > datetime.utcnow()
+        )
+
+    @property
+    def in_trial(self):
+        return (
+            not self.is_paid
+            and datetime.utcnow() < self.trial_end
+        )
+
+    @property
+    def has_access(self):
+        return bool(self.is_admin or self.is_paid or self.in_trial)
+
+    @property
+    def days_left(self):
+        if self.is_admin:
+            return None
+
+        end = self.subscription_end if self.is_paid else self.trial_end
+        remaining = (end - datetime.utcnow()).total_seconds()
+
+        return max(int((remaining + 86399) // 86400), 0)
+
+    @property
+    def can_print(self):
+        """الطباعة: للأدمن دايمًا. للمشترك بعد 24 ساعة. التجربة المجانية: ممنوعة."""
+        if self.is_admin:
+            return True
+        if not self.is_paid:
+            return False
+        if self.can_print_override:
+            return True
+        if self.subscribed_at is None:      # مشتركين قدام قبل إضافة التاريخ
+            return True
+        return datetime.utcnow() >= self.subscribed_at + timedelta(hours=PRINT_WAIT_HOURS)
+
+    @property
+    def status_label(self):
+        if self.is_admin:
+            return "Admin"
+        if self.is_paid:
+            return f"Paid - {self.days_left} days left"
+        if self.in_trial:
+            return f"Trial - {self.days_left} days left"
+        return "Expired"
+
+
+class Protocol(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # جعلنا التصنيف 200 للأمان
+    category = db.Column(db.String(200), default="General") 
+    disease_name = db.Column(db.String(200), nullable=False)
+    
+    # 👇👇 حولنا كل شيء يحتمل الطول إلى db.Text 👇👇
+    keywords = db.Column(db.Text)
+    description = db.Column(db.Text)
+    
+    estim_type = db.Column(db.String(200))
+    estim_params = db.Column(db.Text)
+    estim_role = db.Column(db.Text)
+    
+    us_type = db.Column(db.String(200))
+    us_params = db.Column(db.Text)
+    us_role = db.Column(db.Text)
+    
+    exercises_list = db.Column(db.Text)
+    exercises_role = db.Column(db.Text)
+    
+    ex_frequency = db.Column(db.Text)
+    ex_intensity = db.Column(db.Text)
+    ex_progression = db.Column(db.Text)
+    
+    # ⚠️ دي كانت سبب المشكلة الأخيرة، حولناها لـ Text
+    evidence_level = db.Column(db.Text) 
+    
+    source_ref = db.Column(db.Text)
+    
+    electrode_image = db.Column(db.Text)
+    video_link = db.Column(db.Text) # أحياناً الروابط بتكون طويلة
+    notes = db.Column(db.Text, nullable=True)
+
+@login_manager.user_loader
+def load_user(user_id): return User.query.get(int(user_id))
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Admin access required', 'danger')
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # ==========================================
-# الذكاء الاصطناعي
+# تحديث الأعمدة الناقصة تلقائيًا عند التشغيل (بدون مسح بيانات)
 # ==========================================
+def ensure_columns():
+    try:
+        insp = inspect(db.engine)
+        wanted = {
+            'user': [('can_print', 'BOOLEAN DEFAULT FALSE'), ('subscribed_at', 'TIMESTAMP')],
+            'protocol': [('video_link', 'TEXT'), ('notes', 'TEXT')],
+        }
+        for table, cols in wanted.items():
+            existing = {c['name'] for c in insp.get_columns(table)}
+            for name, ctype in cols:
+                if name in existing:
+                    continue
+                try:
+                    with db.engine.begin() as conn:
+                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {name} {ctype}'))
+                    print(f"schema: added {table}.{name}")
+                except Exception as e:
+                    print(f"schema: {table}.{name}: {e}")
+    except Exception as e:
+        print(f"schema check failed: {e}")
+
+# --- دالة الذكاء الاصطناعي ---
+# --- دالة الذكاء الاصطناعي (النسخة المحسنة والمفصلة) ---
+# --- دالة الذكاء الاصطناعي (نسخة الاستشاري - Pro) ---
 def get_ai_protocol(disease_search):
     try:
-        config = genai.types.GenerationConfig(
+        # إعدادات لزيادة طول الإجابة وسماحية الإبداع
+        # max_output_tokens=3000: يسمح بكتابة مقال طويل جداً
+        # temperature=0.7: يجعل التمارين متنوعة وليست محفوظة
+        if client is None:
+            print("Warning: GEMINI_API_KEY is not configured; AI generation is unavailable.")
+            return None
+
+        config = types.GenerateContentConfig(
             temperature=0.7,
-            max_output_tokens=3000
+            max_output_tokens=3000,
         )
 
         prompt = f"""
-        Act as a Senior Physiotherapist Consultant with 20 years of experience.
+        Act as a Senior Physiotherapist Consultant with 20 years of experience. 
         Create a HIGHLY DETAILED Treatment Protocol for: "{disease_search}".
 
         CRITICAL INSTRUCTIONS:
@@ -593,62 +650,59 @@ def get_ai_protocol(disease_search):
         4. Modalities: Be specific (Hz, us, W/cm2).
 
         OUTPUT FORMAT: Return a raw JSON object ONLY.
-        Keys required:
-        "disease_name",
-        "keywords" (comma separated string),
-        "description" (detailed paragraph),
-        "estim_type", "estim_params", "estim_role",
-        "us_type", "us_params", "us_role",
-        "exercises_list" (This must be a single String containing all exercises formatted with HTML tags <br> and <b> as requested above),
-        "exercises_role",
+        Keys required: 
+        "disease_name", 
+        "keywords" (comma separated string), 
+        "description" (detailed paragraph), 
+        "estim_type", "estim_params", "estim_role", 
+        "us_type", "us_params", "us_role", 
+        "exercises_list" (This must be a single String containing all exercises formatted with HTML tags <br> and <b> as requested above), 
+        "exercises_role", 
         "source_ref",
         "video_link" (return null or empty string),
         "electrode_image" (return null or empty string).
 
         If input is not medical, return JSON with key "error".
         """
-
-        response = model.generate_content(prompt, generation_config=config)
+        
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=config,
+        )
         text_response = response.text.strip()
-
-        if text_response.startswith("```json"):
-            text_response = text_response[7:]
-        if text_response.endswith("```"):
-            text_response = text_response[:-3]
-
+        
+        # تنظيف الرد من علامات الـ Markdown
+        if text_response.startswith("```json"): text_response = text_response[7:]
+        if text_response.endswith("```"): text_response = text_response[:-3]
+        
         data = json.loads(text_response)
-
-        if "error" in data:
-            return None
+        
+        if "error" in data: return None
         return data
 
     except Exception as e:
-        print(f"AI Error: {e}")
+        print(f"❌ AI Error: {e}")
         return None
-
-
 # ==========================================
-# المسارات (Routes)
+# 3. المسارات (Routes)
 # ==========================================
 
-# تحديث الجداول (للأدمن فقط). الأعمدة بتتضاف تلقائيًا عند التشغيل كمان.
+# ⚠️ هام جداً: هذا الرابط بدون حماية لكي يعمل الإصلاح
+# Disabled: database schema changes must be handled by reviewed migrations, not a public URL.
 @app.route('/admin/update-db-schema')
-@admin_required
 def update_db_schema():
-    msgs = ensure_schema()
-    body = "<br>".join(escape(m) for m in msgs) or "Nothing to add, schema is up to date."
-    return f"<h1>Schema check done</h1><p>{body}</p><a href='/admin'>Dashboard</a>"
+    abort(404)
 
-
-@app.route('/admin/toggle-print/<int:user_id>')
+# زر "Early print": استثناء يدوي للمشتركين فقط (قبل مرور 24 ساعة)
+@app.route('/admin/toggle-print/<int:user_id>', methods=['POST'])
 @admin_required
 def toggle_print(user_id):
     user = User.query.get_or_404(user_id)
     user.can_print_override = not bool(user.can_print_override)
     db.session.commit()
-    status = "Enabled" if user.can_print_override else "Disabled"
-    flash(f'Early-print exception {status} for {user.email} (applies to paid users only)', 'info')
-    return redirect(url_for('admin_dashboard'))
+    flash(f"Early-print exception updated for {user.email} (applies to paid users only).", "info")
+    return redirect(url_for("admin_dashboard"))
 
 
 # ---------- تفعيل / إلغاء الاشتراك (بعد تحويل InstaPay) ----------
@@ -680,6 +734,186 @@ def admin_cancel_subscription(user_id):
     return redirect(url_for('admin_dashboard'))
 
 
+# ---------- تصحيح معاملات الـ Ultrasound في جدول البروتوكولات القديم ----------
+@app.route('/admin/fix-ultrasound', methods=['POST'])
+@admin_required
+def fix_ultrasound():
+    updated, unmatched = 0, []
+    for p in Protocol.query.all():
+        if apply_us_rule(p):
+            updated += 1
+        else:
+            unmatched.append(p.disease_name)
+    db.session.commit()
+    msg = f'Ultrasound parameters updated for {updated} protocols.'
+    if unmatched:
+        msg += ' Not matched: ' + ', '.join(unmatched[:15]) + (' ...' if len(unmatched) > 15 else '')
+    flash(msg, 'success' if not unmatched else 'warning')
+    return redirect(url_for('admin_dashboard'))
+
+
+# ==========================================
+# Clinical Library: search + presentation adapter
+# ==========================================
+def _clinical_text(value):
+    return " ".join(str(value or "").strip().casefold().split())
+
+
+def _clinical_condition_score(condition, query):
+    """Match canonical names, aliases, and preserved source names in EN/AR."""
+    q = _clinical_text(query)
+    if not q:
+        return 0
+    names = []
+    canonical = condition.canonical_name or {}
+    if isinstance(canonical, dict):
+        names.extend([canonical.get("en", ""), canonical.get("ar", "")])
+    aliases = condition.aliases or []
+    if isinstance(aliases, list):
+        for alias in aliases:
+            if isinstance(alias, dict):
+                names.extend([alias.get("en", ""), alias.get("ar", "")])
+    source_records = condition.source_records or []
+    if isinstance(source_records, list):
+        names.extend(r.get("original_name", "") for r in source_records if isinstance(r, dict))
+
+    best = 0
+    for name in names:
+        n = _clinical_text(name)
+        if not n:
+            continue
+        if q == n:
+            best = max(best, 100)
+        elif q in n:
+            best = max(best, 80)
+        elif n in q:
+            best = max(best, 65)
+    return best
+
+
+def _clinical_protocol_result(condition, protocol):
+    """Adapt the normalized clinical tables to the existing index.html contract."""
+    Models = CLINICAL_MODELS
+    Phase = Models["ClinicalProtocolPhase"]
+    Exercise = Models["ClinicalExercise"]
+    PhaseExercise = Models["ClinicalPhaseExercise"]
+
+    content = protocol.content_en or {}
+    presentation = content.get("clinical_presentation") or {}
+    notes = content.get("clinical_notes") or {}
+    summary = content.get("summary") or {}
+    electro = content.get("electrotherapy") or []
+    ultrasound = content.get("ultrasound") or {}
+
+    # Escape source strings before creating the small HTML fragment consumed by the template.
+    phase_html = []
+    phases = (Phase.query.filter_by(protocol_id=protocol.protocol_id)
+              .order_by(Phase.sort_order.asc()).all())
+    for phase in phases:
+        phase_content = phase.content_en or {}
+        phase_name = html_escape(str(phase_content.get("name") or phase.phase_key or "Phase"))
+        phase_goal = html_escape(str(phase_content.get("goal") or ""))
+        phase_html.append(f"<h4>{phase_name}{(': ' + phase_goal) if phase_goal else ''}</h4><ul>")
+        linked = (db.session.query(Exercise, PhaseExercise)
+                  .join(PhaseExercise, PhaseExercise.exercise_id == Exercise.exercise_id)
+                  .filter(PhaseExercise.phase_id == phase.phase_id)
+                  .order_by(PhaseExercise.sort_order.asc()).all())
+        for exercise, link in linked:
+            ex = exercise.content_en or {}
+            ex_name = html_escape(str(ex.get("name") or "Exercise"))
+            instructions = html_escape(str(ex.get("instructions") or ""))
+            dosage = html_escape(str(ex.get("dosage") or ""))
+            phase_html.append("<li><b>" + ex_name + "</b>" +
+                              ("<span>" + instructions + "</span>" if instructions else "") +
+                              ("<i>" + dosage + "</i>" if dosage else "") + "</li>")
+        phase_html.append("</ul>")
+
+    electro_types, electro_params, electro_goals = [], [], []
+    for item in electro if isinstance(electro, list) else []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type"):
+            electro_types.append(str(item["type"]))
+        if item.get("parameters"):
+            electro_params.append(str(item["parameters"]))
+        if item.get("placement_guide"):
+            electro_params.append("Placement: " + str(item["placement_guide"]))
+        if item.get("goal"):
+            electro_goals.append(str(item["goal"]))
+
+    ultrasound_regimens = ultrasound.get("regimens") or []
+    ultrasound_lines = []
+    if ultrasound.get("summary"):
+        ultrasound_lines.append(str(ultrasound["summary"]))
+    for regimen in ultrasound_regimens:
+        if isinstance(regimen, dict):
+            ultrasound_lines.append(" | ".join(f"{k}: {v}" for k, v in regimen.items() if v not in (None, "")))
+        else:
+            ultrasound_lines.append(str(regimen))
+    ultrasound_lines.extend(str(x) for x in (ultrasound.get("cautions") or []))
+
+    canonical = condition.canonical_name or {}
+    display_name = (canonical.get("ar") or canonical.get("en") or protocol.source_condition_name
+                    if isinstance(canonical, dict) else protocol.source_condition_name)
+    short_summary = summary.get("definition_short") or ""
+    description = presentation.get("definition") or short_summary
+    notes_text = "\n\n".join(part for part in [
+        "Diagnosis: " + str(notes.get("assessment_diagnosis", "")) if notes.get("assessment_diagnosis") else "",
+        "Manual Therapy: " + str(notes.get("manual_therapy", "")) if notes.get("manual_therapy") else "",
+        "Precautions: " + str(notes.get("precautions", "")) if notes.get("precautions") else "",
+        "Ultrasound cautions: " + "; ".join(str(x) for x in (ultrasound.get("cautions") or [])) if ultrasound.get("cautions") else "",
+    ] if part)
+
+    return {
+        "disease_name": display_name,
+        "category": protocol.specialty or condition.specialty or "General",
+        "keywords": ", ".join([display_name, protocol.source_condition_name or "", protocol.specialty or ""]),
+        "description": description,
+        "estim_type": ", ".join(electro_types),
+        "estim_params": "\n".join(electro_params),
+        "estim_role": "\n".join(electro_goals),
+        "us_type": ultrasound.get("status") or ("Ultrasound" if ultrasound else ""),
+        "us_params": "\n".join(ultrasound_lines),
+        "us_role": ultrasound.get("goal") or "",
+        "exercises_list": "".join(phase_html),
+        "exercises_role": "Progressive rehabilitation phases",
+        "ex_frequency": "",
+        "ex_intensity": "",
+        "ex_progression": "",
+        "evidence_level": "",
+        "source_ref": content.get("scientific_reference") or "",
+        "electrode_image": "",
+        "video_link": "",
+        "notes": notes_text,
+        "clinical_warning": "هذا البروتوكول قيد المراجعة ولم يحصل على اعتماد سريري. يجب مراجعته وتكييفه مع تقييم المريض والإرشادات المعتمدة قبل الاستخدام.",
+        "clinical_status": protocol.clinical_approval_status or "not_approved",
+        "is_clinical_library": True,
+        "source_record_id": protocol.source_record_id,
+    }
+
+
+def find_clinical_protocol(query):
+    """Search the 80-item registry in both languages and resolve via condition_id."""
+    Models = CLINICAL_MODELS
+    conditions = Models["ClinicalCondition"].query.all()
+    scored = [( _clinical_condition_score(c, query), c) for c in conditions]
+    scored = [(score, condition) for score, condition in scored if score > 0]
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    # Try the best-matching condition first. For consolidated diagnoses, prefer
+    # the source protocol whose original name best matches the user's wording.
+    best_score, condition = scored[0]
+    protocols = Models["ClinicalProtocol"].query.filter_by(condition_id=condition.condition_id).all()
+    if not protocols:
+        return None
+    q = _clinical_text(query)
+    protocols.sort(key=lambda p: (100 if q == _clinical_text(p.source_condition_name) else
+                                  80 if q in _clinical_text(p.source_condition_name) else 0), reverse=True)
+    return _clinical_protocol_result(condition, protocols[0])
+
+
 def search_protocol(q):
     """أفضل نتيجة: اسم مطابق، ثم كلمة مفتاحية مطابقة، ثم يبدأ بالكلمة، ثم يحتويها."""
     ql = _norm_name(q)
@@ -705,6 +939,7 @@ def search_protocol(q):
     return rows[0]
 
 
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     # الزائر غير المسجل يشوف صفحة الهبوط
@@ -715,24 +950,39 @@ def home():
         return redirect(url_for('subscription_expired'))
 
     days_left = "Unlimited (Admin)" if current_user.is_admin else current_user.days_left
-
     result = None
     raw_query = request.args.get('disease') or request.form.get('disease')
 
     if raw_query:
         clean_query = " ".join(raw_query.strip().split())
-        result = search_protocol(clean_query)
 
+        # 1) المكتبة السريرية الجديدة: canonical names + aliases EN/AR.
+        try:
+            result = find_clinical_protocol(clean_query)
+        except Exception as exc:
+            # Keep the legacy system available, but expose the failure in logs.
+            app.logger.exception("Clinical library search failed: %s", exc)
+            result = None
+
+        # 2) Legacy protocol table remains as a fallback (الأقرب للاسم أولًا).
+        if not result:
+            result = search_protocol(clean_query)
+
+        # 3) Preserve the existing AI fallback for terms absent from both libraries.
         if not result:
             result = get_ai_protocol(clean_query)
+
+        if result and not isinstance(result, dict):
+            result.exercises_list = sanitize_rich_html(result.exercises_list or "")
+        elif isinstance(result, dict) and not result.get("is_clinical_library"):
+            result["exercises_list"] = sanitize_rich_html(result.get("exercises_list", ""))
 
     return render_template('index.html', result=result, user=current_user, days_left=days_left)
 
 
 @app.route('/subscription')
 def subscription_expired():
-    return render_template('subscribe.html')
-
+    return render_template('subscribe.html') 
 
 @app.route('/admin')
 @admin_required
@@ -741,97 +991,120 @@ def admin_dashboard():
     users = User.query.all()
     return render_template('admin.html', protocols=protocols, users=users)
 
-
-@app.route('/admin/reset-user-password/<email>/<new_password>')
+# Password reset is POST-only; password is never placed in a URL.
+@app.route('/admin/reset-user-password/<int:user_id>', methods=['POST'])
 @admin_required
-def manual_reset(email, new_password):
-    user = User.query.filter_by(email=email).first()
-    if user:
-        user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
-        db.session.commit()
-        flash(f'Success: Password for {email} updated!', 'success')
-        return redirect(url_for('admin_dashboard'))
-    return "User not found", 404
-
+def manual_reset(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get("new_password", "")
+    if len(new_password) < 12:
+        flash("Password must be at least 12 characters.", "danger")
+        return redirect(url_for("admin_dashboard"))
+    user.password = generate_password_hash(new_password, method="pbkdf2:sha256")
+    db.session.commit()
+    flash(f"Password updated for {user.email}.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route('/admin/add-manual', methods=['POST'])
 @admin_required
 def add_manual():
-    image_data = ""
-    if 'electrode_image' in request.files:
-        file = request.files['electrode_image']
-        if file.filename != '':
-            encoded_string = base64.b64encode(file.read()).decode('utf-8')
-            image_data = f"data:image/jpeg;base64,{encoded_string}"
+    try:
+        image_data = read_safe_image_upload(request.files.get("electrode_image"))
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("admin_dashboard"))
 
-    f = request.form
+    form = request.form
+    disease_name = form.get("disease_name", "").strip()
+    if not disease_name:
+        flash("Disease name is required.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
     p = Protocol(
-        disease_name=f['disease_name'],
-        category=f.get('category', 'General'),
-        keywords=f.get('keywords', ''),
-        description=f.get('description', ''),
-        estim_type=f.get('estim_type', ''),
-        estim_params=f.get('estim_params', ''),
-        estim_role=f.get('estim_role', ''),
-        us_type=f.get('us_type', ''),
-        us_params=f.get('us_params', ''),
-        us_role=f.get('us_role', ''),
-        exercises_list=f.get('exercises_list', ''),
-        exercises_role=f.get('exercises_role', ''),
-        ex_frequency=f.get('ex_frequency'),
-        ex_intensity=f.get('ex_intensity'),
-        ex_progression=f.get('ex_progression'),
-        evidence_level=f.get('evidence_level', 'Grade A'),
-        source_ref=f.get('source_ref', ''),
-        video_link=f.get('video_link'),
-        notes=f.get('notes'),
-        electrode_image=image_data
+        disease_name=disease_name,
+        category=form.get("category", "General").strip() or "General",
+        keywords=form.get("keywords", "").strip(),
+        description=form.get("description", "").strip(),
+        estim_type=form.get("estim_type", "").strip(),
+        estim_params=form.get("estim_params", "").strip(),
+        estim_role=form.get("estim_role", "").strip(),
+        # These fields are optional because the current admin form does not include them.
+        us_type=form.get("us_type", "").strip(),
+        us_params=form.get("us_params", "").strip(),
+        us_role=form.get("us_role", "").strip(),
+        exercises_list=sanitize_rich_html(form.get("exercises_list", "")),
+        exercises_role=form.get("exercises_role", "").strip(),
+        ex_frequency=form.get("ex_frequency"),
+        ex_intensity=form.get("ex_intensity"),
+        ex_progression=form.get("ex_progression"),
+        evidence_level=form.get("evidence_level", "Grade A"),
+        source_ref=form.get("source_ref", "").strip(),
+        video_link=form.get("video_link", "").strip(),
+        notes=form.get("notes", "").strip(),
+        electrode_image=image_data,
     )
-    db.session.add(p)
-    db.session.commit()
-    flash('Manual Protocol Added Successfully!', 'success')
-    return redirect(url_for('admin_dashboard'))
+    try:
+        db.session.add(p)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Unable to add manual protocol")
+        flash("Unable to save the protocol. Please review the entered data.", "danger")
+        return redirect(url_for("admin_dashboard"))
 
+    flash("Manual Protocol Added Successfully!", "success")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route('/admin/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
 def edit_protocol(id):
     p = Protocol.query.get_or_404(id)
     if request.method == 'POST':
-        p.disease_name = request.form.get('disease_name')
-        p.category = request.form.get('category')
-        p.description = request.form.get('description')
-        p.keywords = request.form.get('keywords')
-        p.estim_type = request.form.get('estim_type')
-        p.estim_params = request.form.get('estim_params')
-        p.estim_role = request.form.get('estim_role')
-        p.us_type = request.form.get('us_type')
-        p.us_params = request.form.get('us_params')
-        p.us_role = request.form.get('us_role')
-        p.exercises_list = request.form.get('exercises_list')
-        p.exercises_role = request.form.get('exercises_role')
-        p.ex_frequency = request.form.get('ex_frequency')
-        if 'ex_intensity' in request.form:
-            p.ex_intensity = request.form.get('ex_intensity')
-        if 'ex_progression' in request.form:
-            p.ex_progression = request.form.get('ex_progression')
-        if 'evidence_level' in request.form:
-            p.evidence_level = request.form.get('evidence_level')
-        p.source_ref = request.form.get('source_ref')
-        p.video_link = request.form.get('video_link')
-        p.notes = request.form.get('notes')
-        if 'electrode_image' in request.files:
-            file = request.files['electrode_image']
-            if file and file.filename != '':
-                encoded_string = base64.b64encode(file.read()).decode('utf-8')
-                p.electrode_image = f"data:image/jpeg;base64,{encoded_string}"
+        form = request.form
+        p.disease_name = form.get('disease_name', p.disease_name).strip()
+        p.category = form.get('category', p.category)
+        p.description = form.get('description', p.description)
+        p.keywords = form.get('keywords', p.keywords)
+        p.estim_type = form.get('estim_type', p.estim_type)
+        p.estim_params = form.get('estim_params', p.estim_params)
+        p.estim_role = form.get('estim_role', p.estim_role)
+        p.us_type = form.get('us_type', p.us_type)
+        p.us_params = form.get('us_params', p.us_params)
+        p.us_role = form.get('us_role', p.us_role)
+        p.exercises_list = sanitize_rich_html(form.get('exercises_list', p.exercises_list or ''))
+        p.exercises_role = form.get('exercises_role', p.exercises_role)
+        p.ex_frequency = form.get('ex_frequency', p.ex_frequency)
+        # Preserve these existing values unless a future form explicitly submits them.
+        if 'ex_intensity' in form:
+            p.ex_intensity = form.get('ex_intensity')
+        if 'ex_progression' in form:
+            p.ex_progression = form.get('ex_progression')
+        if 'evidence_level' in form:
+            p.evidence_level = form.get('evidence_level')
+        p.source_ref = form.get('source_ref', p.source_ref)
+        p.video_link = form.get('video_link', p.video_link)
+        p.notes = form.get('notes', p.notes)
 
-        db.session.commit()
+        try:
+            uploaded_image = read_safe_image_upload(request.files.get("electrode_image"))
+            if uploaded_image:
+                p.electrode_image = uploaded_image
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return render_template("edit_protocol.html", protocol=p), 400
+
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Unable to update protocol %s", id)
+            flash("Unable to update the protocol. Please review the entered data.", "danger")
+            return render_template("edit_protocol.html", protocol=p), 400
+
         flash('Protocol Updated Successfully!', 'success')
         return redirect(url_for('admin_dashboard'))
 
     return render_template('edit_protocol.html', protocol=p)
-
 
 @app.route('/admin/export-data')
 @admin_required
@@ -843,9 +1116,9 @@ def export_data():
         'description': p.description,
         'notes': p.notes
     } for p in protocols]
-
+    
     df_protocols = pd.DataFrame(p_data)
-
+    
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_protocols.to_excel(writer, sheet_name='Protocols', index=False)
@@ -855,14 +1128,13 @@ def export_data():
         df_users.to_excel(writer, sheet_name='Users', index=False)
 
     output.seek(0)
-
+    
     return send_file(
-        output,
+        output, 
         download_name=f'physio_backup_{datetime.now().strftime("%Y-%m-%d")}.xlsx',
         as_attachment=True,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-
 
 # ==========================================
 # قالب الإكسيل (تحميل + استيراد) - صف لكل تمرين
@@ -1200,7 +1472,7 @@ def _import_template_workbook(xls):
 
         rows = ex_map.get(name.lower())
         if rows:
-            p.exercises_list = rows_to_exercises_html(rows)
+            p.exercises_list = sanitize_rich_html(rows_to_exercises_html(rows))
 
         if is_new and not p.keywords:
             p.keywords = f"{name}, {p.category}"
@@ -1242,7 +1514,7 @@ def _import_legacy_df(df):
         p.estim_type = "Electrical Stimulation"
         p.us_params = get_val(row, 'us_params')
         p.us_type = "Ultrasound"
-        p.exercises_list = get_val(row, 'exercises_list')
+        p.exercises_list = sanitize_rich_html(get_val(row, 'exercises_list'))
         p.exercises_role = get_val(row, 'exercises_role')
         p.ex_frequency = get_val(row, 'ex_frequency')
         p.ex_intensity = get_val(row, 'ex_intensity')
@@ -1251,6 +1523,7 @@ def _import_legacy_df(df):
         if not p.us_params:
             apply_us_rule(p)
     return created, updated
+
 
 
 @app.route('/admin/download-template')
@@ -1270,25 +1543,34 @@ def download_template():
 @admin_required
 def import_excel():
     if 'excel_file' not in request.files:
-        flash('No file selected', 'danger')
-        return redirect(url_for('admin_dashboard'))
+        flash('No file selected', 'danger'); return redirect(url_for('admin_dashboard'))
 
     file = request.files['excel_file']
     if file.filename == '':
-        flash('No selected file', 'warning')
-        return redirect(url_for('admin_dashboard'))
+        flash('No selected file', 'warning'); return redirect(url_for('admin_dashboard'))
 
     try:
-        orphans = []
-        deleted = 0
-        if file.filename.lower().endswith('.csv'):
-            created, updated = _import_legacy_df(pd.read_csv(file))
+        # Only .xlsx workbooks are accepted; reject CSV and macro-enabled formats.
+        if not file.filename.lower().endswith('.xlsx'):
+            raise ValueError("Upload an .xlsx file only.")
+        file.stream.seek(0)
+        if file.stream.read(4) != b'PK\x03\x04':
+            raise ValueError("Invalid XLSX file.")
+        file.stream.seek(0)
+
+        xls = pd.ExcelFile(file, engine='openpyxl')
+        sheets = set(xls.sheet_names)
+        check = ['Conditions', 'Exercises'] if {'Conditions', 'Exercises'} <= sheets else [xls.sheet_names[0]]
+        for name in check:
+            probe = xls.parse(name, dtype=str)
+            if len(probe.index) > 5000 or len(probe.columns) > 40:
+                raise ValueError("Workbook exceeds the allowed size (5,000 rows / 40 columns).")
+
+        orphans, deleted = [], 0
+        if {'Conditions', 'Exercises'} <= sheets:
+            created, updated, deleted, orphans = _import_template_workbook(xls)
         else:
-            xls = pd.ExcelFile(file)
-            if 'Conditions' in xls.sheet_names and 'Exercises' in xls.sheet_names:
-                created, updated, deleted, orphans = _import_template_workbook(xls)
-            else:
-                created, updated = _import_legacy_df(xls.parse(xls.sheet_names[0]))
+            created, updated = _import_legacy_df(xls.parse(xls.sheet_names[0]))
 
         db.session.commit()
         flash(f'Done! Created {created}, Updated {updated}, Deleted {deleted} protocols.', 'success')
@@ -1302,191 +1584,97 @@ def import_excel():
 
     return redirect(url_for('admin_dashboard'))
 
-
-@app.route('/admin/delete/<int:id>')
+# Disabled: deletion by GET is unsafe. Replace with POST + CSRF-protected form.
+@app.route('/admin/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_protocol(id):
-    p = Protocol.query.get_or_404(id)
-    db.session.delete(p)
+    protocol = Protocol.query.get_or_404(id)
+    db.session.delete(protocol)
     db.session.commit()
-    flash('Protocol Deleted', 'warning')
-    return redirect(url_for('admin_dashboard'))
-
-
-# ---------- تصحيح معاملات الـ Ultrasound في كل البرامج (مرة واحدة) ----------
-@app.route('/admin/fix-ultrasound')
-@admin_required
-def fix_ultrasound():
-    updated, unmatched = 0, []
-    for p in Protocol.query.all():
-        if apply_us_rule(p):
-            updated += 1
-        else:
-            unmatched.append(p.disease_name)
-    db.session.commit()
-    un = "<br>".join(escape(n) for n in unmatched) or "None"
-    return (f"<h1>Ultrasound parameters updated for {updated} protocols</h1>"
-            f"<h3>Not matched (edit manually or send me the names):</h3><p>{un}</p>"
-            f"<a href='/admin'>Dashboard</a>")
-
-
-# ---------- استيراد ملف JSON ----------
-def _format_exercises_html(ex_data):
-    html = ""
-    for p_key in ["phase_1", "phase_2", "phase_3"]:
-        phase = ex_data.get(p_key)
-        if phase:
-            html += f"<h4>{phase.get('name', p_key.title())}: {phase.get('goal', '')}</h4><ul>"
-            for ex in phase.get('exercises', []):
-                html += (f"<li><b>{ex.get('name')}</b>: {ex.get('instructions')} "
-                         f"<i>({ex.get('dosage')})</i></li>")
-            html += "</ul><hr>"
-    return html
-
-
-def _format_notes(notes_data):
-    if not notes_data:
-        return ""
-    return (f"Diagnosis: {notes_data.get('assessment_diagnosis', '')}\n\n"
-            f"Manual Therapy: {notes_data.get('manual_therapy', '')}\n\n"
-            f"Precautions: {notes_data.get('precautions', '')}")
-
-
-@app.route('/admin/import-generated-json')
-@admin_required
-def import_generated_json():
-    try:
-        file_path = os.path.join(app.root_path, 'final_physio_protocols.json')
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data_list = json.load(f)
-
-        added_count = 0
-        updated_count = 0
-
-        for item in data_list:
-            d_name = item.get('condition_name')
-            existing = Protocol.query.filter_by(disease_name=d_name).first()
-
-            if existing:
-                p = existing
-                updated_count += 1
-            else:
-                p = Protocol()
-                added_count += 1
-
-            p.disease_name = d_name
-            p.category = item.get('category', 'General')
-            p.description = item.get('clinical_presentation', {}).get('definition', '')
-            p.keywords = f"{d_name}, {p.category}, {p.description[:50]}"
-
-            electro_list = item.get('electrotherapy') or [{}]
-            electro = electro_list[0]
-            p.estim_type = electro.get('type', 'TENS/FES')
-            p.estim_params = electro.get('parameters', 'See notes')
-            p.estim_role = electro.get('goal', 'Pain relief')
-
-            p.exercises_list = _format_exercises_html(item.get('therapeutic_exercises', {}))
-            p.exercises_role = "Rehabilitation Progression"
-            p.source_ref = item.get('scientific_reference', 'Kisner & Colby')
-            p.notes = _format_notes(item.get('clinical_notes', {}))
-
-            # معاملات الـ Ultrasound: من القواعد الجاهزة بدل "Refer to notes"
-            if not apply_us_rule(p) and not existing:
-                p.us_type = "Ultrasound"
-                p.us_params = ""
-
-            if not existing:
-                db.session.add(p)
-
-        db.session.commit()
-        flash(f'Successfully Imported! Added: {added_count}, Updated: {updated_count}', 'success')
-        return redirect(url_for('admin_dashboard'))
-
-    except FileNotFoundError:
-        return "<h1>Error: File 'final_physio_protocols.json' not found. Did you push it to GitHub?</h1>"
-    except Exception as e:
-        db.session.rollback()
-        return f"<h1>Error: {escape(str(e))}</h1>"
-
-
-@app.route('/admin/update-content')
-@admin_required
-def update_content():
-    return redirect(url_for('import_generated_json'))
-
-
-# ---------- تسجيل الدخول والتسجيل ----------
-def _safe_next(url):
-    return bool(url) and url.startswith('/') and not url.startswith('//')
-
-
-def _home_url(disease):
-    return url_for('home', disease=disease) if disease else url_for('home')
-
+    flash("Protocol deleted.", "warning")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    disease = (request.values.get('disease') or '').strip()
-    nxt = request.args.get('next')
-    if current_user.is_authenticated:
-        return redirect(_home_url(disease))
-
+    disease = (request.values.get('disease') or '').strip()[:200]
     if request.method == 'POST':
-        email = (request.form.get('email') or '').strip().lower()
-        password = request.form.get('password') or ''
-        user = User.query.filter(db.func.lower(User.email) == email).first()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            if _safe_next(nxt):
-                return redirect(nxt)
-            return redirect(_home_url(disease))
-        flash('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'danger')
+            return redirect(url_for('home', disease=disease) if disease else url_for('home'))
+        flash('Login Failed. Check email/password', 'danger')
+        return render_template('login.html', email=email, disease=disease), 401
     return render_template('login.html', disease=disease)
 
 
 @app.route('/forgot-password')
-def forgot_password():
-    return render_template('forgot_password.html')
+def forgot_password(): return render_template('forgot_password.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    disease = (request.values.get('disease') or '').strip()
-    if current_user.is_authenticated:
-        return redirect(_home_url(disease))
-
+    disease = (request.values.get('disease') or '').strip()[:200]
     if request.method == 'POST':
-        email = (request.form.get('email') or '').strip().lower()
-        password = request.form.get('password') or ''
-
-        if '@' not in email or '.' not in email:
-            flash('اكتب بريد إلكتروني صحيح.', 'danger')
-        elif len(password) < 6:
-            flash('كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل.', 'danger')
-        elif User.query.filter(db.func.lower(User.email) == email).first():
-            flash('البريد ده مسجل بالفعل. سجّل دخولك.', 'warning')
-            return redirect(url_for('login', disease=disease) if disease else url_for('login'))
-        else:
-            try:
-                user = User(email=email,
-                            password=generate_password_hash(password, method='pbkdf2:sha256'))
-                db.session.add(user)
-                db.session.commit()
-                login_user(user)
-                return redirect(_home_url(disease))
-            except Exception as e:
-                db.session.rollback()
-                print(f"Register error: {e}")
-                flash('حصلت مشكلة أثناء إنشاء الحساب. جرّب تاني.', 'danger')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if len(password) < 12:
+            flash('Password must be at least 12 characters.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        if not email or len(email) > 150 or '@' not in email:
+            flash('Enter a valid email address.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        if User.query.filter_by(email=email).first():
+            flash('This email is already registered. Please log in.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        try:
+            user = User(email=email, password=generate_password_hash(password, method='pbkdf2:sha256'))
+            db.session.add(user)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash('Unable to create account. Please try again.', 'danger')
+            return render_template('register.html', email=email, disease=disease), 400
+        login_user(user)
+        return redirect(url_for('home', disease=disease) if disease else url_for('home'))
     return render_template('register.html', disease=disease)
 
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+# Disabled: this legacy GET endpoint overwrites legacy protocols by flattening phases.
+@app.route('/admin/update-content')
+@login_required
+def update_content():
+    abort(405)
 
+# Permanently disabled: the old route executed db.drop_all() and embedded admin credentials.
+@app.route('/setup-sys-secure-hmna12-4-2026')
+def setup_system():
+    abort(404)
 
+# ==========================================
+# دالة استيراد ملف JSON المولد (للعمل على Render)
+# ==========================================
+# Disabled: legacy importer writes flattened data through GET and can overwrite records.
+@app.route('/admin/import-generated-json')
+@login_required
+def import_generated_json():
+    abort(405)
+with app.app_context():
+    db.create_all()
+    ensure_columns()
+    _admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    if _admin_email:
+        _u = User.query.filter(db.func.lower(User.email) == _admin_email).first()
+        if _u and not _u.is_admin:
+            _u.is_admin = True
+            db.session.commit()
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=False)
