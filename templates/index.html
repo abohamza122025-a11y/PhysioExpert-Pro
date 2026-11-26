@@ -305,10 +305,82 @@
       #exerciseBox .pe-gallery-counter{position:absolute;bottom:9px;left:10px;background:rgba(35,34,64,.78);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
     </style>
 
+
+    <style id="physio-display-v4">
+      /* ===== Parameter tables ===== */
+      .param-table{margin:0;border:1px solid #e3ebf3;border-radius:12px;overflow:hidden;background:#fff}
+      .param-row{display:grid;grid-template-columns:minmax(96px,36%) 1fr;border-bottom:1px solid #edf2f7}
+      .param-row dt,.param-row dd{margin:0;padding:9px 13px;font-size:.88rem;line-height:1.7}
+      .param-row dt{background:#f6f9fc;color:#52657c;font-weight:700;text-transform:capitalize}
+      .param-row dd{color:#1f2f42;font-weight:600;word-break:break-word}
+      .param-note{padding:9px 13px;font-size:.86rem;line-height:1.8;color:#4b5d73;background:#fbfcfe;border-bottom:1px solid #edf2f7}
+      .param-table > :last-child{border-bottom:0}
+      .param-table.green .param-row dt{background:#f0faf5;color:#2a7a60}
+      .param-table.warn .param-row dt{background:#fff6ea;color:#9a5b00}
+      .param-note.warn{background:#fff8ee;color:#8a5200}
+
+      /* ===== Overview clamp ===== */
+      .pe-clamp.is-clamped{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+      .pe-more{border:0;background:none;color:#0d6efd;font-weight:700;font-size:.88rem;padding:6px 0 0}
+
+      /* ===== Exercises toolbar ===== */
+      .pe-ex-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+      .pe-ex-toolbar[hidden]{display:none}
+      .pe-ex-count{font-size:.85rem;color:#5b6b80;font-weight:700}
+      .pe-view-switch{display:inline-flex;background:#eef3f8;border-radius:999px;padding:3px}
+      .pe-view-switch button{border:0;background:transparent;border-radius:999px;padding:5px 18px;font-size:.84rem;font-weight:700;color:#53647a}
+      .pe-view-switch button.active{background:#fff;color:#174a7e;box-shadow:0 2px 8px rgba(25,48,75,.12)}
+      .pe-link-btn{border:0;background:none;color:#0d6efd;font-weight:700;font-size:.85rem;padding:4px 6px}
+      .phase-accordion .accordion-button .pe-phase-count{margin-inline-start:10px;background:#dfeaf7;color:#174a7e;border-radius:999px;font-size:.74rem;font-weight:800;padding:1px 9px}
+
+      /* ===== Compact exercise rows (click to expand) ===== */
+      #exerciseBox.pe-compact ul{grid-template-columns:1fr!important;gap:8px!important}
+      #exerciseBox.pe-compact li.pe-exercise-card{cursor:pointer;border-radius:12px!important}
+      #exerciseBox.pe-compact li.pe-exercise-card .pe-exercise-media{display:none}
+      #exerciseBox.pe-compact li.pe-exercise-card.open .pe-exercise-media{display:flex}
+      #exerciseBox.pe-compact li.pe-exercise-card .pe-exercise-body{padding:11px 14px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 12px}
+      #exerciseBox.pe-compact li.pe-exercise-card .pe-exercise-description{display:none;flex-basis:100%;order:5;padding-top:4px}
+      #exerciseBox.pe-compact li.pe-exercise-card.open .pe-exercise-description{display:block}
+      #exerciseBox.pe-compact li.pe-exercise-card b{margin:0!important;flex:1 1 220px}
+      #exerciseBox.pe-compact li.pe-exercise-card i{margin-top:0!important}
+      #exerciseBox .pe-chevron{display:none;color:#8795a8;font-size:.8rem;transition:transform .2s;margin-inline-start:auto}
+      #exerciseBox.pe-compact .pe-chevron{display:inline-block}
+      #exerciseBox.pe-compact li.pe-exercise-card.open .pe-chevron{transform:rotate(180deg)}
+      #exerciseBox .pe-exercise-description{font-size:.92rem;color:#4b5065;line-height:1.9}
+
+      @media print{
+        .pe-ex-toolbar,.pe-more,.pe-chevron{display:none!important}
+        .pe-clamp.is-clamped{display:block!important;overflow:visible!important}
+        #exerciseBox.pe-compact li.pe-exercise-card .pe-exercise-description{display:block!important}
+        #exerciseBox.pe-compact li.pe-exercise-card .pe-exercise-media{display:none!important}
+        .param-row{break-inside:avoid}
+      }
+        /* اتجاه النص حسب أول حرف: يمنع تلخبط الإنجليزي داخل صفحة عربية */
+        .param-table dd, .param-table dt, .param-note, .pe-exercise-description,
+        #exerciseBox li b, #exerciseBox li i, #exerciseBox li span,
+        #exerciseBox .accordion-button, .pe-phase-title { unicode-bidi: plaintext; }
+        .param-table dd, .param-note, .pe-exercise-description { text-align: start; }
+    </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
 
 {# ---------- helper: split "a | b | c" (or "a, b, c") into chips ---------- #}
+{% macro param_table(s, tone='') %}
+    {% if s %}
+        {% set segs = s|replace('\r', '')|replace('|', '\n')|replace(';', '\n') %}
+        <dl class="param-table {{ tone }}">
+        {%- for seg in segs.split('\n') if seg.strip() %}
+            {%- if ':' in seg %}
+                {%- set kv = seg.split(':', 1) %}
+                <div class="param-row"><dt>{{ kv[0].strip()|replace('_', ' ') }}</dt><dd>{{ kv[1].strip() }}</dd></div>
+            {%- else %}
+                <div class="param-note {{ tone }}">{{ seg.strip() }}</div>
+            {%- endif %}
+        {%- endfor %}
+        </dl>
+    {% endif %}
+{% endmacro %}
+
 {% macro chips(s, cls='') %}
     {% if s %}
         {% set parts = s.split('|') if '|' in s else s.split(',') %}
@@ -489,7 +561,8 @@
                 <h5 class="print-title">نظرة عامة</h5>
                 <div class="panel-card p-4 mb-3">
                     <div class="panel-title mb-2"><i class="fas fa-notes-medical me-2 text-primary"></i>التعريف والصورة الإكلينيكية</div>
-                    <p class="mb-0" style="line-height: 1.8; color: #2b3445;">{{ result.description }}</p>
+                    <p class="mb-0 pe-clamp" id="peDesc" style="line-height: 1.8; color: #2b3445;">{{ result.description }}</p>
+                    <button type="button" class="pe-more no-print" id="peDescMore" hidden>عرض المزيد</button>
                 </div>
 
                 {% if result.ex_progression %}
@@ -522,7 +595,7 @@
                                 </div>
                             </div>
                             <div class="glance-label mb-2">الإعدادات</div>
-                            <div class="mb-3">{{ chips(result.estim_params) }}</div>
+                            <div class="mb-3">{{ param_table(result.estim_params) }}</div>
 
                             {% if result.electrode_image %}
                             <div class="text-center my-3 p-2 border rounded bg-white">
@@ -554,7 +627,7 @@
                                 </div>
                             </div>
                             <div class="glance-label mb-2">{{ 'تنبيه واحتياطات' if us_warn else 'الإعدادات' }}</div>
-                            <div class="mb-3">{{ chips(result.us_params, '' if us_warn else 'green') }}</div>
+                            <div class="mb-3">{{ param_table(result.us_params, 'warn' if us_warn else 'green') }}</div>
                             {% if result.us_role %}
                             <div class="small text-muted border-top pt-2"><strong class="text-dark">الهدف العلاجي:</strong> {{ result.us_role }}</div>
                             {% endif %}
@@ -570,11 +643,20 @@
 
             {# ===== التمارين العلاجية ===== #}
             <div class="tab-pane fade" id="tab-exercises">
-                <h5 class="print-title">Therapeutic التمارين العلاجية</h5>
+                <h5 class="print-title">التمارين العلاجية</h5>
                 <div class="panel-card p-4">
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         {% if result.ex_frequency %}<span class="param-chip"><i class="fas fa-calendar-check me-1"></i>{{ result.ex_frequency }}</span>{% endif %}
                         {% if result.ex_intensity %}<span class="param-chip"><i class="fas fa-gauge-high me-1"></i>{{ result.ex_intensity }}</span>{% endif %}
+                    </div>
+
+                    <div class="pe-ex-toolbar no-print" id="peToolbar" hidden>
+                        <div class="pe-view-switch" role="group" aria-label="طريقة عرض التمارين">
+                            <button type="button" data-view="compact" class="active">مختصر</button>
+                            <button type="button" data-view="full">كامل</button>
+                        </div>
+                        <span class="pe-ex-count" id="peExCount"></span>
+                        <button type="button" class="pe-link-btn" id="peToggleAll">فتح كل المراحل</button>
                     </div>
 
                     <div class="protocol-content" id="exerciseBox">
@@ -598,7 +680,7 @@
                 </div>
             </div>
 
-            {# ===== تنبيه واحتياطاتs & Notes ===== #}
+            {# ===== الاحتياطات والملاحظات ===== #}
             {% if result.notes %}
             <div class="tab-pane fade" id="tab-notes">
                 <h5 class="print-title">الاحتياطات والملاحظات</h5>
@@ -610,7 +692,7 @@
 
     </div>
 
-    {% elif request.method == 'POST' %}
+    {% elif request.method == 'POST' or request.args.get('disease') %}
         <div class="text-center py-5">
             <div class="bg-white p-5 rounded-circle shadow-sm d-inline-block mb-3">
                 <i class="fas fa-search fa-3x text-primary opacity-50"></i>
@@ -763,20 +845,117 @@
                 if (node === media || node === body) return;
                 body.appendChild(node);
             });
+            // Mark the free-text description so compact mode can collapse it (legacy text node or <span>).
+            Array.from(body.childNodes).forEach(function (node) {
+                if (node.nodeType === 3 && node.textContent.trim()) {
+                    var wrap = document.createElement('span');
+                    wrap.className = 'pe-exercise-description';
+                    wrap.textContent = node.textContent.trim();
+                    body.replaceChild(wrap, node);
+                } else if (node.nodeType === 1 && node.tagName === 'SPAN' && !node.className) {
+                    node.className = 'pe-exercise-description';
+                } else if (node.nodeType === 1 && node.tagName === 'BR') {
+                    node.remove();
+                }
+            });
+            var chevron = document.createElement('span');
+            chevron.className = 'fas fa-chevron-down pe-chevron';
+            chevron.setAttribute('aria-hidden', 'true');
+            body.appendChild(chevron);
+            li.setAttribute('tabindex', '0');
+            li.setAttribute('aria-expanded', 'false');
             li.appendChild(media);
             li.appendChild(body);
         });
     }
 
-    /* ---------- 2) Notes: split into Diagnosis / العلاج اليدوي / تنبيه واحتياطاتs cards ---------- */
+    /* ---------- 1c) Exercise controls: compact/full view, counts, open all phases ---------- */
+    (function () {
+        var toolbar = document.getElementById('peToolbar');
+        if (!box || !toolbar) return;
+        var cards = box.querySelectorAll('li.pe-exercise-card');
+        if (!cards.length) return;
+        toolbar.hidden = false;
+        box.classList.add('pe-compact');
+
+        var phases = box.querySelectorAll('#phaseAcc .accordion-item');
+        document.getElementById('peExCount').textContent =
+            cards.length + ' تمرين' + (phases.length > 1 ? ' في ' + phases.length + ' مراحل' : '');
+        phases.forEach(function (item) {
+            var n = item.querySelectorAll('li.pe-exercise-card').length;
+            var btn = item.querySelector('.accordion-button');
+            if (btn && n) {
+                var badge = document.createElement('span');
+                badge.className = 'pe-phase-count';
+                badge.textContent = n;
+                btn.appendChild(badge);
+            }
+        });
+
+        function toggleCard(li) {
+            if (!box.classList.contains('pe-compact')) return;
+            var open = li.classList.toggle('open');
+            li.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        cards.forEach(function (li) {
+            li.addEventListener('click', function (e) {
+                if (e.target.closest('.pe-gallery-nav')) return;
+                toggleCard(li);
+            });
+            li.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCard(li); }
+            });
+        });
+
+        toolbar.querySelectorAll('[data-view]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var compact = b.getAttribute('data-view') === 'compact';
+                box.classList.toggle('pe-compact', compact);
+                toolbar.querySelectorAll('[data-view]').forEach(function (x) { x.classList.toggle('active', x === b); });
+                if (!compact) cards.forEach(function (li) { li.classList.remove('open'); });
+            });
+        });
+
+        var all = document.getElementById('peToggleAll');
+        if (phases.length > 1 && window.bootstrap) {
+            all.addEventListener('click', function () {
+                var cols = box.querySelectorAll('#phaseAcc .accordion-collapse');
+                var anyClosed = Array.prototype.some.call(cols, function (c) { return !c.classList.contains('show'); });
+                cols.forEach(function (c) {
+                    var inst = bootstrap.Collapse.getOrCreateInstance(c, { toggle: false });
+                    if (anyClosed) inst.show(); else inst.hide();
+                });
+                all.textContent = anyClosed ? 'طيّ كل المراحل' : 'فتح كل المراحل';
+            });
+        } else {
+            all.hidden = true;
+        }
+    })();
+
+    /* ---------- 1d) Overview description: clamp long text ---------- */
+    (function () {
+        var p = document.getElementById('peDesc');
+        var more = document.getElementById('peDescMore');
+        if (!p || !more || p.textContent.length < 380) return;
+        p.classList.add('is-clamped');
+        more.hidden = false;
+        more.addEventListener('click', function () {
+            var clamped = p.classList.toggle('is-clamped');
+            more.textContent = clamped ? 'عرض المزيد' : 'عرض أقل';
+        });
+    })();
+
+    /* ---------- 2) Notes: split into Diagnosis / Manual therapy / Precautions cards ---------- */
     var raw = document.getElementById('notesRaw');
     var out = document.getElementById('notesStructured');
     if (raw && out) {
         var t = raw.textContent;
         var defs = [
-            { key: 'Diagnosis',      icon: 'fa-stethoscope',     cls: 'note-blue',  title: 'التقييم والتشخيص' },
-            { key: 'العلاج اليدوي', icon: 'fa-hands',           cls: 'note-green', title: 'العلاج اليدوي' },
-            { key: 'تنبيه واحتياطاتs',    icon: 'fa-triangle-exclamation', cls: 'note-red', title: 'تنبيه واحتياطاتs' }
+            { key: 'Diagnosis',            icon: 'fa-stethoscope',          cls: 'note-blue',  title: 'التقييم والتشخيص' },
+            { key: 'Manual Therapy',       icon: 'fa-hands',                cls: 'note-green', title: 'العلاج اليدوي' },
+            { key: 'العلاج اليدوي',        icon: 'fa-hands',                cls: 'note-green', title: 'العلاج اليدوي' },
+            { key: 'Precautions',          icon: 'fa-triangle-exclamation', cls: 'note-red',   title: 'الاحتياطات وموانع الاستخدام' },
+            { key: 'Ultrasound cautions',  icon: 'fa-wave-square',          cls: 'note-red',   title: 'احتياطات الموجات فوق الصوتية' }
         ];
         var found = [];
         defs.forEach(function (d) {
