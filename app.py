@@ -166,6 +166,28 @@ def split_list_filter(s):
     if not s: return []
     return [item.strip() for item in s.split(',')]
 
+
+@app.template_filter('param_items')
+def param_items_filter(s):
+    """يحوّل نص المعاملات إلى أزواج (الاسم, القيمة) لعرضها في جدول مرتب.
+    يفصل على السطر الجديد و | ، وعلى ; أو , لو بعدها "اسم:" فقط (علشان الجمل العادية متتقطعش)."""
+    if not s:
+        return []
+    out = []
+    for part in re.split(r'[\r\n|]+', str(s)):
+        pieces = re.split(r';\s*(?=[^;:]{1,40}:)|,\s*(?=[A-Za-z][A-Za-z _/()\-]{1,30}:\s)', part)
+        for seg in pieces:
+            seg = seg.strip(' ;,')
+            if not seg:
+                continue
+            if ':' in seg:
+                k, v = seg.split(':', 1)
+                if k.strip() and v.strip() and len(k.strip()) <= 40:
+                    out.append((k.strip(), v.strip()))
+                    continue
+            out.append(('', seg))
+    return out
+
 NONE3 = ("None", "None", "None")
 
 US_RULES = {
