@@ -19,7 +19,7 @@ html{scroll-behavior:smooth}
 body{margin:0;font-family:'Cairo',Tahoma,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.75;min-height:100vh;display:flex;flex-direction:column}
 a{color:var(--blue)}
 button{font-family:inherit}
-.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 20px}
+.wrap{width:100%;max-width:1320px;margin:0 auto;padding:0 20px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* ---------- navbar ---------- */
@@ -93,7 +93,7 @@ main{flex:1}
 .print-title{display:none}
 
 /* ---------- summary grid ---------- */
-.sum-grid{display:grid;grid-template-columns:1.55fr 1fr;grid-template-areas:"ex def" "ex mod" "ex pre" "ex ref";gap:16px;align-items:start}
+.sum-grid{display:grid;grid-template-columns:.95fr 1.05fr 1.5fr;grid-template-areas:"def mod ex" "pre mod ex" "ref mod ex";gap:16px;align-items:start}
 .a-ex{grid-area:ex}.a-def{grid-area:def}.a-mod{grid-area:mod}.a-pre{grid-area:pre}.a-ref{grid-area:ref}
 .clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .def-text{margin:0;color:#3a455f;line-height:2;white-space:pre-line}
@@ -110,7 +110,9 @@ table.pe td.n{width:44px;text-align:center;color:#8590a8;font-weight:800;font-si
 table.pe td.n span{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--blue-soft);color:var(--blue)}
 table.pe td.name strong{display:block;color:var(--navy);font-weight:800;line-height:1.5}
 table.pe td.name .instr{display:block;color:#5b6682;font-size:.86rem;line-height:1.85;margin-top:3px}
-table.pe td.dose{width:190px}
+table.pe td.dose{width:150px}
+.a-ex table.pe td.dose{width:176px}
+.a-ex .dose-chip{font-size:.76rem;padding:1px 9px}
 .dose-chip{display:inline-block;background:var(--teal-soft);color:#0b7c6e;border:1px solid #c6ebe5;border-radius:9px;padding:2px 11px;font-weight:700;font-size:.8rem;line-height:1.7}
 .dash{color:#aab3c6}
 tr.phase-row td{background:linear-gradient(90deg,#f3f6fc,#fff);border-bottom:1px solid var(--line)!important;padding:9px 14px}
@@ -178,6 +180,9 @@ tr.phase-row .pg{display:block;color:var(--muted);font-weight:500;font-size:.8re
 footer{background:#fff;border-top:1px solid var(--line);text-align:center;padding:22px 0;color:var(--muted);font-size:.85rem}
 footer .dis{color:var(--red);font-weight:800}
 
+@media(max-width:1180px){
+  .sum-grid{grid-template-columns:1fr 1.3fr;grid-template-areas:"def ex" "mod ex" "pre ex" "ref ex"}
+}
 @media(max-width:900px){
   .sum-grid{grid-template-columns:1fr;grid-template-areas:"def" "mod" "ex" "pre" "ref"}
 }
@@ -222,23 +227,20 @@ footer .dis{color:var(--red);font-weight:800}
 
 {# ---- key/value table: "a: b | c: d" or lines ---- #}
 {% macro kv(s, tone='', limit=0) %}
-  {% if s %}
-    {% set items = (s|replace('\r','')|replace('|','\n')|replace(';','\n')).split('\n')|map('trim')|select|list %}
-    {% if items %}
-    <div class="kv {{ tone }}">
-      {%- for seg in items %}
-        {%- if limit == 0 or loop.index <= limit %}
-          {%- if ':' in seg %}
-            {%- set parts = seg.split(':', 1) %}
-            <div class="kv-row"><span class="k" dir="auto">{{ parts[0].strip()|replace('_',' ') }}</span><span class="v" dir="auto">{{ parts[1].strip() }}</span></div>
-          {%- else %}
-            <div class="kv-row"><span class="note" dir="auto">{{ seg }}</span></div>
-          {%- endif %}
+  {% set items = s|param_items %}
+  {% if items %}
+  <div class="kv {{ tone }}">
+    {%- for k, v in items %}
+      {%- if limit == 0 or loop.index <= limit %}
+        {%- if k %}
+          <div class="kv-row"><span class="k" dir="auto">{{ k|replace('_',' ') }}</span><span class="v" dir="auto">{{ v }}</span></div>
+        {%- else %}
+          <div class="kv-row"><span class="note" dir="auto">{{ v }}</span></div>
         {%- endif %}
-      {%- endfor %}
-      {%- if limit and items|length > limit %}<span class="kv-more">+ {{ items|length - limit }} معاملات إضافية في تبويب الوسائل العلاجية</span>{% endif %}
-    </div>
-    {% endif %}
+      {%- endif %}
+    {%- endfor %}
+    {%- if limit and items|length > limit %}<span class="kv-more">+ {{ items|length - limit }} معاملات إضافية في تبويب الوسائل العلاجية</span>{% endif %}
+  </div>
   {% endif %}
 {% endmacro %}
 
@@ -280,6 +282,8 @@ footer .dis{color:var(--red);font-weight:800}
   {% set show_estim = et not in ['', 'none'] %}
   {% set show_us = ut not in ['', 'none'] %}
   {% set us_warn = ut.startswith('not') or ut.startswith('contra') or ut.startswith('avoid') %}
+  {% set us_labels = {'optional': 'اختياري (علاج مساعد)', 'indicated': 'مُوصى به', 'recommended': 'مُوصى به', 'not indicated': 'غير مُوصى به', 'not_indicated': 'غير مُوصى به', 'contraindicated': 'ممنوع'} %}
+  {% set us_label = us_labels.get(ut, result.us_type) %}
   {% set ex = result.exercises_list or '' %}
   {% set can_print_now = current_user.is_authenticated and (current_user.is_admin or current_user.can_print) %}
 
@@ -305,9 +309,6 @@ footer .dis{color:var(--red);font-weight:800}
         {% endif %}
       </div>
     </div>
-    {% if result.clinical_warning %}
-      <div class="rh-note warn"><i class="fas fa-triangle-exclamation"></i><div><b>تنبيه المراجعة السريرية:</b> {{ result.clinical_warning }}</div></div>
-    {% endif %}
     {% if not can_print_now and current_user.is_authenticated %}
       <div class="rh-note lock no-print"><i class="fas fa-lock"></i><div>
         {% if current_user.is_paid %}تتاح الطباعة بعد مرور 24 ساعة من تفعيل الاشتراك.
@@ -319,7 +320,7 @@ footer .dis{color:var(--red);font-weight:800}
   {# ---------- KPIs ---------- #}
   <section class="kpis">
     {% if show_estim %}<div class="kpi"><div class="ic ic-blue"><i class="fas fa-bolt"></i></div><div><small>العلاج الكهربائي</small><b dir="auto">{{ result.estim_type }}</b></div></div>{% endif %}
-    {% if show_us %}<div class="kpi"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>الموجات فوق الصوتية</small><b dir="auto">{{ result.us_type }}</b></div></div>{% endif %}
+    {% if show_us %}<div class="kpi"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>الموجات فوق الصوتية</small><b dir="auto">{{ us_label }}</b></div></div>{% endif %}
     {% if result.ex_frequency %}<div class="kpi"><div class="ic ic-gold"><i class="fas fa-calendar-check"></i></div><div><small>تكرار التمارين</small><b dir="auto">{{ result.ex_frequency }}</b></div></div>{% endif %}
     {% if result.ex_intensity %}<div class="kpi"><div class="ic ic-red"><i class="fas fa-gauge-high"></i></div><div><small>الشدة</small><b dir="auto">{{ result.ex_intensity }}</b></div></div>{% endif %}
   </section>
@@ -359,7 +360,7 @@ footer .dis{color:var(--red);font-weight:800}
         {% endif %}
         {% if show_us %}
         <div class="mod {{ 'warn' if us_warn else '' }}">
-          <div class="mod-h"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>الموجات فوق الصوتية</small><b dir="auto">{{ result.us_type }}</b></div></div>
+          <div class="mod-h"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>الموجات فوق الصوتية</small><b dir="auto">{{ us_label }}</b></div></div>
           {{ kv(result.us_params, 'warn' if us_warn else 'teal', 4) }}
         </div>
         {% endif %}
@@ -406,7 +407,7 @@ footer .dis{color:var(--red);font-weight:800}
       <div class="card" {% if us_warn %}style="border-color:#f3dcae"{% endif %}>
         <div class="card-h"><i class="fas fa-wave-square" {% if us_warn %}style="color:var(--amber)"{% endif %}></i> الموجات فوق الصوتية</div>
         <div class="card-b">
-          <div class="mod-h"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>{{ 'تنبيه' if us_warn else 'النوع' }}</small><b dir="auto">{{ result.us_type }}</b></div></div>
+          <div class="mod-h"><div class="ic {{ 'ic-amber' if us_warn else 'ic-teal' }}"><i class="fas fa-wave-square"></i></div><div><small>{{ 'تنبيه' if us_warn else 'النوع' }}</small><b dir="auto">{{ us_label }}</b></div></div>
           {{ kv(result.us_params, 'warn' if us_warn else 'teal') }}
           {% if result.us_role %}<div class="goal"><b>الهدف العلاجي:</b> <span dir="auto">{{ result.us_role }}</span></div>{% endif %}
         </div>
